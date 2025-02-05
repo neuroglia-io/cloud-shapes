@@ -1,0 +1,23 @@
+services:
+
+  mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "28017:27017"
+
+  cloudshapes:
+    image: ${DOCKER_REGISTRY-}cloudshapesapi
+    build:
+      context: .
+      dockerfile: ../../src/CloudShapes.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      DATABASE__CONNECTIONSTRING: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo

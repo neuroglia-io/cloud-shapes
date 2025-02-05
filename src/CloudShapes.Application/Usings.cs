@@ -1,0 +1,12 @@
+﻿global using CloudShapes.Core;
+global using CloudShapes.Core.Resources;
+global using MongoDB.Bson;
+global using MongoDB.Driver;
+global using Neuroglia;
+global using Neuroglia.Data.Expressions;
+global using Neuroglia.Data.Expressions.Services;
+global using Neuroglia.Eventing.CloudEvents;
+global using Neuroglia.Mediation;
+global using Newtonsoft.Json.Schema;
+global using Pluralize.NET;
+global using System.Text.RegularExpressions;

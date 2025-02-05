@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33829.357
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudShapes.Core", "src\CloudShapes.Core\CloudShapes.Core.csproj", "{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{35C1A5BD-A8CF-4621-B475-4B2B8B88C228}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudShapes.Application", "src\CloudShapes.Application\CloudShapes.Application.csproj", "{D592C231-B9C0-4311-8F7B-C4423704EA91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudShapes.Api", "src\CloudShapes.Api\CloudShapes.Api.csproj", "{22630C45-4038-4FE6-A53E-741ECF63D1E9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "deployments", "deployments", "{4CB30F1E-DA0E-4FE4-8BE8-5D43EA052A0D}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "deployments\docker-compose\docker-compose.dcproj", "{31863D2D-FD33-4365-A004-20A62D2BE20C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D592C231-B9C0-4311-8F7B-C4423704EA91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D592C231-B9C0-4311-8F7B-C4423704EA91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D592C231-B9C0-4311-8F7B-C4423704EA91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D592C231-B9C0-4311-8F7B-C4423704EA91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22630C45-4038-4FE6-A53E-741ECF63D1E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22630C45-4038-4FE6-A53E-741ECF63D1E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22630C45-4038-4FE6-A53E-741ECF63D1E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22630C45-4038-4FE6-A53E-741ECF63D1E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31863D2D-FD33-4365-A004-20A62D2BE20C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31863D2D-FD33-4365-A004-20A62D2BE20C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31863D2D-FD33-4365-A004-20A62D2BE20C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31863D2D-FD33-4365-A004-20A62D2BE20C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CECD222E-790C-4B2A-B7B1-67A5BDAD6BA7} = {35C1A5BD-A8CF-4621-B475-4B2B8B88C228}
+		{D592C231-B9C0-4311-8F7B-C4423704EA91} = {35C1A5BD-A8CF-4621-B475-4B2B8B88C228}
+		{22630C45-4038-4FE6-A53E-741ECF63D1E9} = {35C1A5BD-A8CF-4621-B475-4B2B8B88C228}
+		{31863D2D-FD33-4365-A004-20A62D2BE20C} = {4CB30F1E-DA0E-4FE4-8BE8-5D43EA052A0D}
+	EndGlobalSection
+EndGlobal
