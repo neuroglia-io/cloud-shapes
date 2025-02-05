@@ -1,4 +1,4 @@
-﻿namespace CloudShapes.Core.Resources;
+﻿namespace CloudShapes.Data.Models;
 
 /// <summary>
 /// Defines how to extract a specific value from a CloudEvent

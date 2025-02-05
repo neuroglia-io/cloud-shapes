@@ -1,4 +1,4 @@
-﻿namespace CloudShapes.Core.Resources;
+﻿namespace CloudShapes.Data.Models;
 
 /// <summary>
 /// Represents a collection of triggers used to create, update and delete projections of a specific type
@@ -40,5 +40,16 @@ public record ProjectionTriggerCollection
     /// Gets/sets a list containing the triggers responsible for deleting projections when specific CloudEvents occur
     /// </summary>
     public virtual EquatableList<CloudEventDeleteTriggerDefinition>? Delete { get; set; }
+
+    /// <summary>
+    /// Gets a new <see cref="IEnumerable{T}"/> containing all configured <see cref="CloudEventTriggerDefinition"/>s
+    /// </summary>
+    /// <returns>A new <see cref="IEnumerable{T}"/> containing all configured <see cref="CloudEventTriggerDefinition"/>s</returns>
+    public virtual IEnumerable<CloudEventTriggerDefinition> AsEnumerable()
+    {
+        foreach (var trigger in Create) yield return trigger;
+        if (Update != null) foreach (var trigger in Update) yield return trigger;
+        if (Delete != null) foreach (var trigger in Delete) yield return trigger;
+    }
 
 }

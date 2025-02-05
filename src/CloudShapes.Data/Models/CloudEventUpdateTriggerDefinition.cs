@@ -1,4 +1,4 @@
-﻿namespace CloudShapes.Core.Resources;
+﻿namespace CloudShapes.Data.Models;
 
 /// <summary>
 /// Represents a trigger that updates an existing projection when a CloudEvent occurs

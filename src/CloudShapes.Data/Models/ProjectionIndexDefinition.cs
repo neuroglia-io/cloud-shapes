@@ -1,4 +1,4 @@
-﻿namespace CloudShapes.Core.Resources;
+﻿namespace CloudShapes.Data.Models;
 
 /// <summary>
 /// Represents the definition of a projection's index

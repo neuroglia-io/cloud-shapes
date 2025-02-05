@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CloudShapes.Core\CloudShapes.Core.csproj" />
+    <ProjectReference Include="..\CloudShapes.Data\CloudShapes.Data.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,5 @@
-﻿global using CloudShapes.Core;
-global using CloudShapes.Core.Resources;
+﻿global using CloudShapes.Data;
+global using CloudShapes.Data.Models;
 global using MongoDB.Bson;
 global using MongoDB.Driver;
 global using Neuroglia;

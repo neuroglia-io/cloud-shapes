@@ -1,4 +1,4 @@
-﻿namespace CloudShapes.Core;
+﻿namespace CloudShapes.Data;
 
 /// <summary>
 /// Enumerates all supported CloudEvent value resolution strategies
