@@ -21,6 +21,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2D197434-8
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{CC530B6A-334D-44F3-A757-A57C66F5596D}"
+	ProjectSection(SolutionItems) = preProject
+		config.yml = config.yml
+		.github\PULL_REQUEST_TEMPLATE.md = .github\PULL_REQUEST_TEMPLATE.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{1EEF9640-03FC-40B7-856C-41F2676537D7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEMPLATE", "{54AD138E-F022-445E-8E41-10E791963BDD}"
+	ProjectSection(SolutionItems) = preProject
+		.github\ISSUE_TEMPLATE\bug.yml = .github\ISSUE_TEMPLATE\bug.yml
+		.github\ISSUE_TEMPLATE\feature.yml = .github\ISSUE_TEMPLATE\feature.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,5 +66,7 @@ Global
 		{22630C45-4038-4FE6-A53E-741ECF63D1E9} = {35C1A5BD-A8CF-4621-B475-4B2B8B88C228}
 		{31863D2D-FD33-4365-A004-20A62D2BE20C} = {4CB30F1E-DA0E-4FE4-8BE8-5D43EA052A0D}
 		{D25BA44B-B95E-4999-B72F-1BFD7E436ED6} = {35C1A5BD-A8CF-4621-B475-4B2B8B88C228}
+		{1EEF9640-03FC-40B7-856C-41F2676537D7} = {CC530B6A-334D-44F3-A757-A57C66F5596D}
+		{54AD138E-F022-445E-8E41-10E791963BDD} = {CC530B6A-334D-44F3-A757-A57C66F5596D}
 	EndGlobalSection
 EndGlobal
