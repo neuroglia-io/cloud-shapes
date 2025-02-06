@@ -9,6 +9,7 @@ global using MongoDB.Bson.Serialization.Conventions;
 global using MongoDB.Bson.Serialization.Serializers;
 global using MongoDB.Driver;
 global using Neuroglia.Data.Expressions.JQ;
+global using Neuroglia.Data.PatchModel.Services;
 global using Neuroglia.Eventing.CloudEvents;
 global using Neuroglia.Mediation;
 global using Neuroglia.Mediation.AspNetCore;

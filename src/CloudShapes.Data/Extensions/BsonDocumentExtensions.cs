@@ -7,6 +7,17 @@ public static partial class BsonDocumentExtensions
 {
 
     /// <summary>
+    /// Gets the <see cref="BsonDocument"/>'s id, if any
+    /// </summary>
+    /// <param name="document">The <see cref="BsonDocument"/> to get the id of, if any</param>
+    /// <returns>The <see cref="BsonDocument"/>'s id, if any</returns>
+    public static string? GetId(this BsonDocument document)
+    {
+        if (document.TryGetValue("_id", out var id)) return id.ToString();
+        else return null;
+    }
+
+    /// <summary>
     /// Finds the <see cref="BsonValue"/> at the specified path
     /// </summary>
     /// <param name="document">The extended <see cref="BsonDocument"/></param>
@@ -14,6 +25,7 @@ public static partial class BsonDocumentExtensions
     /// <returns>The <see cref="BsonValue"/>, if any, at the specified path</returns>
     public static BsonValue? Find(this BsonDocument document, string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (string.IsNullOrEmpty(path)) return null;
         var jsonPath = path.StartsWith("$.") ? path[2..] : path;
         var segments = jsonPath.Split('.', StringSplitOptions.RemoveEmptyEntries);
@@ -61,6 +73,7 @@ public static partial class BsonDocumentExtensions
     /// <param name="value">The new value to set</param>
     public static void Replace(this BsonDocument document, string path, BsonValue value)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var segments = path.Split('.');
         ReplaceRecursive(document, segments, 0, value);
     }
@@ -93,6 +106,123 @@ public static partial class BsonDocumentExtensions
             }
         }
     }
+
+    /// <summary>
+    /// Replaces a document within a BsonArray at the specified path, matching by GetId().
+    /// If a matching document is found, it is replaced with the new document.
+    /// If no match is found, no changes are made.
+    /// </summary>
+    /// <param name="document">The BsonDocument containing the array.</param>
+    /// <param name="path">The dot-separated path to the BsonArray.</param>
+    /// <param name="value">The new document to replace the existing one.</param>
+    public static void ReplaceInArray(this BsonDocument document, string path, BsonDocument value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(value);
+        var id = value.GetId() ?? throw new InvalidOperationException("Replacement document must have a valid ID.");
+        var array = document.Find(path) as BsonArray;
+        if (array == null) return;
+        for (var i = 0; i < array.Count; i++)
+        {
+            var item = array[i].AsBsonDocument;
+            if (item.GetId()?.Equals(id) == true)
+            {
+                array[i] = value;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds the specified value to the array at the given path. If the path does not exist or is not an array, it creates one.
+    /// </summary>
+    /// <param name="document">The BsonDocument to modify.</param>
+    /// <param name="path">The dot-separated path to the array property.</param>
+    /// <param name="value">The value to add to the array.</param>
+    public static void AddTo(this BsonDocument document, string path, BsonValue value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(value);
+        if (string.IsNullOrEmpty(path)) return;
+        var segments = path.Split('.');
+        AddToRecursive(document, segments, 0, value);
+    }
+
+    static void AddToRecursive(BsonValue current, string[] segments, int index, BsonValue newValue)
+    {
+        if (index >= segments.Length) return;
+        var segment = segments[index];
+        var match = ArrayIndexRegex().Match(segment);
+        if (match.Success)
+        {
+            var arrayKey = segment[..segment.IndexOf('[')];
+            var arrayIndex = int.Parse(match.Groups[1].Value);
+            if (current is BsonDocument document)
+            {
+                if (!document.Contains(arrayKey) || !document[arrayKey].IsBsonArray) document[arrayKey] = new BsonArray();
+                var array = document[arrayKey].AsBsonArray;
+                if (array.Count <= arrayIndex) return;
+                AddToRecursive(array[arrayIndex], segments, index + 1, newValue);
+            }
+        }
+        else if (current is BsonDocument doc)
+        {
+            if (index == segments.Length - 1)
+            {
+                if (!doc.Contains(segment) || !doc[segment].IsBsonArray) doc[segment] = new BsonArray();
+                doc[segment].AsBsonArray.Add(newValue);
+            }
+            else
+            {
+                if (!doc.Contains(segment) || !doc[segment].IsBsonDocument) doc[segment] = new BsonDocument();
+                AddToRecursive(doc[segment], segments, index + 1, newValue);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes the property at the specified path from the BsonDocument.
+    /// </summary>
+    /// <param name="document">The BsonDocument to modify.</param>
+    /// <param name="path">The dot-separated path to the property to remove.</param>
+    public static void RemoveAt(this BsonDocument document, string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var segments = path.Split('.');
+        RemoveAtRecursive(document, segments, 0);
+    }
+
+    static void RemoveAtRecursive(BsonValue current, string[] segments, int index)
+    {
+        if (index >= segments.Length || current is not BsonDocument doc) return;
+        var segment = segments[index];
+        if (index == segments.Length - 1) doc.Remove(segment);
+        else if (doc.Contains(segment) && doc[segment].IsBsonDocument) RemoveAtRecursive(doc[segment], segments, index + 1);
+    }
+
+    /// <summary>
+    /// Removes the document with the specified id from the array at the given path.
+    /// </summary>
+    /// <param name="document">The BsonDocument containing the array.</param>
+    /// <param name="path">The dot-separated path to the BsonArray.</param>
+    /// <param name="id">The id of the document to remove.</param>
+    public static void RemoveFrom(this BsonDocument document, string path, string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var array = document.Find(path) as BsonArray;
+        if (array == null) return;
+        for (var i = 0; i < array.Count; i++)
+        {
+            var item = array[i].AsBsonDocument;
+            if (item.GetId()?.Equals(id) == true)
+            {
+                array.RemoveAt(i);
+                return;
+            }
+        }
+    }
+
 
     [GeneratedRegex(@"\[(\d+)\]$", RegexOptions.Compiled)]
     private static partial Regex ArrayIndexRegex();

@@ -1,5 +1,3 @@
-using Neuroglia.Data.PatchModel.Services;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -39,10 +37,12 @@ builder.Services.AddSingleton<IPluralize>(provider => new Pluralizer());
 builder.Services.AddSerialization();
 builder.Services.AddNewtonsoftJsonSerializer();
 builder.Services.AddJQExpressionEvaluator();
-builder.Services.AddSingleton<ICloudEventValueResolver, CloudEventValueResolver>();
+builder.Services.AddSingleton<ICloudEventCorrelationKeyResolver, CloudEventCorrelationKeyResolver>();
 builder.Services.AddSingleton<IPatchHandler, JsonMergePatchHandler>();
 builder.Services.AddSingleton<IPatchHandler, JsonPatchHandler>();
 builder.Services.AddSingleton<IPatchHandler, JsonStrategicMergePatchHandler>();
+builder.Services.AddSingleton<ISchemaValidator, SchemaValidator>();
+builder.Services.AddSingleton<IDbContext, DbContext>();
 
 var app = builder.Build();
 app.MapControllers();

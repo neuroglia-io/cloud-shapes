@@ -1,12 +1,4 @@
-﻿using CloudShapes.Application.Services;
-using CloudShapes.Data.Models;
-using MongoDB.Bson.IO;
-using MongoDB.Driver;
-using Neuroglia.Data.PatchModel.Services;
-using Neuroglia.Serialization;
-using Newtonsoft.Json.Linq;
-
-namespace CloudShapes.Application.Commands.CloudEvents;
+﻿namespace CloudShapes.Application.Commands.CloudEvents;
 
 /// <summary>
 /// Represents the <see cref="Command"/> used to ingest a <see cref="CloudEvent"/>
@@ -26,16 +18,24 @@ public class IngestCloudEventCommand(CloudEvent e)
 /// <summary>
 /// Represents the service used to handle <see cref="IngestCloudEventCommand"/>s
 /// </summary>
+/// <param name="logger">The service used to perform logging</param>
 /// <param name="database">The current <see cref="IMongoDatabase"/></param>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
-/// <param name="pluralize">The service used to pluralize terms</param>
+/// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="expressionEvaluator">The service used to evaluate runtime expressions</param>
 /// <param name="cloudEventValueResolver">The service used to resolve values from <see cref="CloudEvent"/>s</param>
 /// <param name="patchHandlers">An <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
-public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IPluralize pluralize, IExpressionEvaluator expressionEvaluator, ICloudEventValueResolver cloudEventValueResolver, IEnumerable<IPatchHandler> patchHandlers, IJsonSerializer jsonSerializer)
+/// <param name="schemaValidator">The service used to validate schemas</param>
+public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandler> logger, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, 
+    IExpressionEvaluator expressionEvaluator, ICloudEventCorrelationKeyResolver cloudEventValueResolver, IEnumerable<IPatchHandler> patchHandlers, ISchemaValidator schemaValidator, IJsonSerializer jsonSerializer)
     : ICommandHandler<IngestCloudEventCommand>
 {
+
+    /// <summary>
+    /// Gets the service used to perform logging
+    /// </summary>
+    protected ILogger Logger { get; } = logger;
 
     /// <summary>
     /// Gets the current <see cref="IMongoDatabase"/>
@@ -48,9 +48,9 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
     protected IMongoCollection<ProjectionType> ProjectionTypes { get; } = projectionTypes;
 
     /// <summary>
-    /// Gets the service used to pluralize terms
+    /// Gets the current <see cref="IDbContext"/>
     /// </summary>
-    protected IPluralize Pluralize { get; } = pluralize;
+    protected IDbContext DbContext { get; } = dbContext;
 
     /// <summary>
     /// Gets the service used to evaluate runtime expressions
@@ -60,12 +60,17 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
     /// <summary>
     /// Gets the service used to resolve values from <see cref="CloudEvent"/>s
     /// </summary>
-    protected ICloudEventValueResolver CloudEventValueResolver { get; } = cloudEventValueResolver;
+    protected ICloudEventCorrelationKeyResolver CloudEventValueResolver { get; } = cloudEventValueResolver;
 
     /// <summary>
     /// Gets an <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s
     /// </summary>
     protected IEnumerable<IPatchHandler> PatchHandlers { get; } = patchHandlers;
+
+    /// <summary>
+    /// Gets the service used to validate schemas
+    /// </summary>
+    protected ISchemaValidator SchemaValidator { get; } = schemaValidator;
 
     /// <summary>
     /// Gets the service used to serialize/deserialize data to/from JSON
@@ -128,25 +133,12 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
         ArgumentNullException.ThrowIfNull(trigger);
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        var projections = Database.GetCollection<BsonDocument>(Pluralize.Pluralize(projectionType.Name));
         var projection = (await ExpressionEvaluator.EvaluateAsync(trigger.State, e, cancellationToken: cancellationToken).ConfigureAwait(false))!;
+        var validationResult = await SchemaValidator.ValidateAsync(projection, projectionType.Schema, cancellationToken).ConfigureAwait(false);
+        if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
         var document = BsonDocument.Create(projection);
         document["_id"] = correlationId;
-        if (projectionType.Relationships != null)
-        {
-            foreach (var relationship in projectionType.Relationships)
-            {
-                //todo: apply to all types of relationships
-                var path = relationship.Key;
-                var key = document.Find(path);
-                if (key == null) continue;
-                var targetCollection = Database.GetCollection<BsonDocument>(Pluralize.Pluralize(relationship.Target));
-                var target = await (await targetCollection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", BsonValue.Create(key)), new FindOptions<BsonDocument, BsonDocument>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                if (target == null) continue;
-                document.Replace(path, target);
-            }
-        }
-        await projections.InsertOneAsync(document, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        await DbContext.Set(projectionType).AddAsync(document, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -164,9 +156,8 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
         ArgumentNullException.ThrowIfNull(trigger);
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        var projections = Database.GetCollection<BsonDocument>(Pluralize.Pluralize(projectionType.Name));
-        var projectionFilter = Builders<BsonDocument>.Filter.Eq("_id", BsonValue.Create(correlationId));
-        var projection = await (await projections.FindAsync(projectionFilter, new FindOptions<BsonDocument, BsonDocument>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var projections = DbContext.Set(projectionType);
+        var projection = await projections.GetAsync(correlationId, cancellationToken).ConfigureAwait(false);
         if (projection == null) return;
         switch (trigger.Strategy)
         {
@@ -175,6 +166,8 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
                 var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(trigger.Patch.Type)) ?? throw new NullReferenceException($"Failed to find an handler for the specified patch type '{trigger.Patch.Type}'");
                 var toPatch = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
                 var patched = patchHandler.ApplyPatchAsync(trigger.Patch.Document, toPatch, cancellationToken).ConfigureAwait(false);
+                var validationResult = await SchemaValidator.ValidateAsync(patched, projectionType.Schema, cancellationToken).ConfigureAwait(false);
+                if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
                 projection = BsonDocument.Create(patched);
                 break;
             case ProjectionUpdateStrategy.Replace:
@@ -186,32 +179,15 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
                 object updated;
                 if (trigger.State is string expression) updated = (await ExpressionEvaluator.EvaluateAsync(expression, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
                 else updated = (await ExpressionEvaluator.EvaluateAsync(trigger.State!, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
+                validationResult = await SchemaValidator.ValidateAsync(updated, projectionType.Schema, cancellationToken).ConfigureAwait(false);
+                if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
                 projection = BsonDocument.Create(updated);
                 projection["_id"] = correlationId;
                 break;
             default:
                 throw new NotSupportedException($"The specified update strategy '{trigger.Strategy}' is not supported");
         }
-        var result = await projections.ReplaceOneAsync(projectionFilter, projection, new ReplaceOptions(), cancellationToken).ConfigureAwait(false);
-        if (result.MatchedCount < 1) return;
-        var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
-        var relatedProjectionTypesFilter = relatedProjectionTypesFilterBuilder.ElemMatch("relationships", relatedProjectionTypesFilterBuilder.Eq("target", projectionType.Name));
-        var relatedProjectionTypes = await (await ProjectionTypes.FindAsync(relatedProjectionTypesFilter, new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
-        foreach (var relatedProjectionType in relatedProjectionTypes)
-        {
-            //todo: apply to all types of relationships
-            var relatedProjections = Database.GetCollection<BsonDocument>(Pluralize.Pluralize(relatedProjectionType.Name));
-            foreach(var relationship in relatedProjectionType.Relationships!.Where(r => r.Target == projectionType.Name))
-            {
-                var relatedProjectionsFilterBuilder = Builders<BsonDocument>.Filter;
-                var relatedProjectionsFilter = relatedProjectionsFilterBuilder.Eq($"{relationship.Key}._id", correlationId);
-                foreach (var relatedProjection in await (await relatedProjections.FindAsync(relatedProjectionsFilter, new FindOptions<BsonDocument, BsonDocument>(), cancellationToken)).ToListAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    relatedProjection.Replace(relationship.Key, projection);
-                    await relatedProjections.ReplaceOneAsync(Builders<BsonDocument>.Filter.Eq("_id", relatedProjection["_id"]), relatedProjection, new ReplaceOptions(), cancellationToken).ConfigureAwait(false);
-                }
-            }
-        }
+        await projections.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -229,8 +205,7 @@ public class IngestCloudEventCommandHandler(IMongoDatabase database, IMongoColle
         ArgumentNullException.ThrowIfNull(trigger);
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        var projections = Database.GetCollection<BsonDocument>(Pluralize.Pluralize(projectionType.Name));
-        await projections.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", BsonValue.Create(correlationId)), new DeleteOptions(), cancellationToken).ConfigureAwait(false);
+        await DbContext.Set(projectionType).DeleteAsync(correlationId, cancellationToken).ConfigureAwait(false);
         //todo: cascading delete
     }
 

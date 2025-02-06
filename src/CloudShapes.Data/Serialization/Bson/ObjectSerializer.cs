@@ -18,7 +18,9 @@ public class ObjectSerializer
     {
         if (value is not JToken token)
         {
-            BsonDocumentSerializer.Instance.Serialize(context, BsonValue.Create(value));
+            var valueType = value.GetType();
+            if (valueType.IsValueType || valueType == typeof(string)) BsonValueSerializer.Instance.Serialize(context, BsonValue.Create(value));
+            else BsonDocumentSerializer.Instance.Serialize(context, BsonValue.Create(value));
             return;
         }
         if (token == null || token.Type == JTokenType.Null)

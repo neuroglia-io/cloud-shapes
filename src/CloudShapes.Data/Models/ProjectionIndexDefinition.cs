@@ -22,6 +22,11 @@ public record ProjectionIndexDefinition
     public virtual bool Unique { get; set; }
 
     /// <summary>
+    /// Gets/sets a boolean that defines whether or not the index is sorted in a descending fashion
+    /// </summary>
+    public virtual bool Descending { get; set; }
+
+    /// <summary>
     /// Gets/sets a boolean that defines whether or not the index supports full text searches
     /// </summary>
     public virtual bool Text { get; set; }

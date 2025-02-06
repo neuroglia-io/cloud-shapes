@@ -15,7 +15,7 @@ public class CreateProjectionTypeCommand
     /// <summary>
     /// Gets/sets the schema that defines, documents and validates the state of projections of this type
     /// </summary>
-    public virtual JSchema State { get; set; } = null!;
+    public virtual JSchema Schema { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for creating new projections when specific CloudEvents occur
@@ -62,7 +62,7 @@ public class CreateProjectionTypeCommandHandler(IMongoDatabase database, IMongoC
     /// <inheritdoc/>
     public virtual async Task<IOperationResult<ProjectionType>> HandleAsync(CreateProjectionTypeCommand command, CancellationToken cancellationToken = default)
     {
-        var projectionType = new ProjectionType(command.Name, command.State, command.Triggers, command.Indexes, command.Relationships);
+        var projectionType = new ProjectionType(command.Name, command.Schema, command.Triggers, command.Indexes, command.Relationships);
         await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
         var collectionName =  Pluralize.Pluralize(projectionType.Name);
         var collectionNames = await (await Database.ListCollectionNamesAsync(new ListCollectionNamesOptions(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -85,8 +85,12 @@ public class CreateProjectionTypeCommandHandler(IMongoDatabase database, IMongoC
                 var keys = index.Text
                     ? Builders<BsonDocument>.IndexKeys.Text(index.Fields[0])
                     : index.Unique
-                        ? Builders<BsonDocument>.IndexKeys.Ascending(index.Fields[0])
-                        : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Fields));
+                        ? index.Descending 
+                            ? Builders<BsonDocument>.IndexKeys.Descending(index.Fields[0])
+                            : Builders<BsonDocument>.IndexKeys.Ascending(index.Fields[0])
+                        : index.Descending 
+                            ? Builders<BsonDocument>.IndexKeys.Descending(string.Join(",", index.Fields))
+                            : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Fields));
                 var options = new CreateIndexOptions { Unique = index.Unique };
                 indexModels.Add(new CreateIndexModel<BsonDocument>(keys, options));
             }
