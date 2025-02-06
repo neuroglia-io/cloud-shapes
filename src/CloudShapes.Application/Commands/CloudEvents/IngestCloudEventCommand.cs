@@ -159,6 +159,7 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
         var projections = DbContext.Set(projectionType);
         var projection = await projections.GetAsync(correlationId, cancellationToken).ConfigureAwait(false);
         if (projection == null) return;
+        var metadata = projection[ProjectionMetadata.PropertyName];
         switch (trigger.Strategy)
         {
             case ProjectionUpdateStrategy.Patch:
@@ -183,6 +184,7 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
                 if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
                 projection = BsonDocument.Create(updated);
                 projection["_id"] = correlationId;
+                projection[ProjectionMetadata.PropertyName] = metadata;
                 break;
             default:
                 throw new NotSupportedException($"The specified update strategy '{trigger.Strategy}' is not supported");

@@ -55,6 +55,21 @@ public interface IRepository
     Task DeleteAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the count of projections in the collection
+    /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The count of projections in the collection</returns>
+    Task<long> CountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the count of projections in the collection that match the specified filter
+    /// </summary>
+    /// <param name="filter">The filter definition used to match documents</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The count of projections in the collection that match the specified filter</returns>
+    Task<long> CountAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken= default);
+
+    /// <summary>
     /// Lists all projections contained by the repository
     /// </summary>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>

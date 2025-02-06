@@ -1,0 +1,76 @@
+﻿@namespace CloudShapes.Dashboard.Components
+@using CloudShapes.Dashboard.Components.MonacoEditorStateManagement
+@inherits StatefulComponent<MonacoEditor, MonacoEditorStore, MonacoEditorState>
+
+<div class="d-flex justify-content-between mb-2">
+    <div>
+        <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="Store.OnCopyToClipboard" TooltipTitle="Copy to clipboard">
+            <Icon Name="IconName.Clipboard" />
+        </Button>
+    </div>
+    <PreferredLanguageSelector PreferredLanguageChange="Store.ToggleTextBasedEditorLanguageAsync" />
+</div>
+<StandaloneCodeEditor @ref="Store.TextEditor"
+                      ConstructionOptions="Store.StandaloneEditorConstructionOptions"
+                      OnDidInit="Store.OnTextBasedEditorInitAsync"
+                      OnDidChangeModelContent="OnDidChangeModelContent"
+                      CssClass="h-300-px" />
+
+@code {
+    /// <summary>
+    /// A boolean indicating the editor is read-only
+    /// </summary>
+    [Parameter] public bool IsReadOnly { get; set; } = false;
+    /// <summary>
+    /// The document to display
+    /// </summary>
+    [Parameter] public object? Document { get; set; }
+    /// <summary>
+    /// The JSON representation of the document to display
+    /// </summary>
+    [Parameter] public string? DocumentJson { get; set; }
+    /// <summary>
+    /// The YAML representation of the document to display
+    /// </summary>
+    [Parameter] public string? DocumentYaml { get; set; }
+    /// <summary>
+    /// The <see cref="EventCallback"/>see called when the text changes
+    /// </summary>
+    [Parameter] public EventCallback<string> OnTextChanged { get; set; }
+    /// <summary>
+    /// The document's model name, if any
+    /// </summary>
+    [Parameter] public string ModelName { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        Store.SetIsReadOnly(IsReadOnly);
+        if (!string.IsNullOrWhiteSpace(ModelName))
+        {
+            Store.SetTexModelName(ModelName);
+        }
+        if (Document !=  null)
+        {
+            Store.SetDocument(Document);
+        }
+        if (!string.IsNullOrWhiteSpace(DocumentJson))
+        {
+            Store.SetDocumentJson(DocumentJson);
+        }
+        if (!string.IsNullOrWhiteSpace(DocumentYaml))
+        {
+            Store.SetDocumentYaml(DocumentYaml);
+        }
+    }
+
+    async Task OnDidChangeModelContent(ModelContentChangedEvent e)
+    {
+        if (OnTextChanged.HasDelegate)
+        {
+            await OnTextChanged.InvokeAsync(await Store.TextEditor!.GetValue());
+        } 
+    }
+
+}

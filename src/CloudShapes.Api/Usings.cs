@@ -1,12 +1,12 @@
 ﻿global using CloudShapes.Application.Configuration;
 global using CloudShapes.Application.Services;
 global using CloudShapes.Data.Models;
+global using CloudShapes.Data.Serialization.Bson;
 global using CloudShapes.Data.Serialization.Json;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.Extensions.Options;
 global using MongoDB.Bson.Serialization;
 global using MongoDB.Bson.Serialization.Conventions;
-global using MongoDB.Bson.Serialization.Serializers;
 global using MongoDB.Driver;
 global using Neuroglia.Data.Expressions.JQ;
 global using Neuroglia.Data.PatchModel.Services;

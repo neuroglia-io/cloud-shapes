@@ -1,0 +1,17 @@
+﻿global using BlazorBootstrap;
+global using CloudShapes.Api.Client.Services;
+global using CloudShapes.Dashboard;
+global using CloudShapes.Dashboard.Layout;
+global using CloudShapes.Dashboard.Services;
+global using CloudShapes.Dashboard.Services.Interfaces;
+global using CloudShapes.Dashboard.StateManagement;
+global using CloudShapes.Data.Models;
+global using Microsoft.AspNetCore.Components;
+global using Microsoft.AspNetCore.Components.Web;
+global using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+global using Microsoft.JSInterop;
+global using Neuroglia.Blazor.Dagre;
+global using Neuroglia.Reactive;
+global using Neuroglia.Serialization;
+global using System.ComponentModel;
+global using System.Reactive.Linq;

@@ -1,0 +1,71 @@
+﻿@namespace CloudShapes.Dashboard.Layout
+@inherits LayoutComponentBase
+@inject IOptions<ApplicationOptions> Options
+@inject NavigationManager NavigationManager
+@inject JSInterop JsInterop
+@inject ILocalStorage Storage
+@inject IMonacoEditorHelper MonacoEditorHelper
+
+<div class="page h-100 d-flex flex-column">    
+    <header class="header navbar navbar-expand-lg flex-row">        
+        <a class="navbar-brand d-flex flex-row align-items-center justify-content-center" href="#">        
+            <svg class="logo" viewBox="-10 -10 60 60">
+                <use href="#logo" />
+            </svg>
+            <span class="logo-typing">Cloud Shapes</span>
+        </a>
+        <nav class="navbar-collapse">
+            <ul class="navbar-nav">    
+                <div class="dropdown">
+                    <button class="btn nav-link dropdown-toggle @(IsActive("", NavLinkMatch.All) || IsActive("projections", NavLinkMatch.Prefix) ? "active" : "")" type="button" id="projectionDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="btn-label">Projections</span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="projectionDropdownButton">
+                        <li>
+                            <NavLink class="nav-link" href="projections/types" Match="NavLinkMatch.All">
+                                <span class="btn-label">Types</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+                </div>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="about" Match="NavLinkMatch.All">
+                        <span class="btn-label">About</span>
+                    </NavLink>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <CloudShapes.Dashboard.Components.Breadcrumb class="d-flex align-items-center px-3 py-2" />
+    <main class="flex-grow d-flex flex-column p-3">
+        @Body
+    </main>
+</div>
+
+<Toasts class="p-3" AutoHide="true" Delay="2000" Placement="ToastsPlacement.MiddleCenter" />
+
+@code{
+
+    ClaimsPrincipal? user;
+    string theme = "dark";
+
+    protected override async Task OnInitializedAsync()
+    {
+        theme = await Storage.GetItemAsync("preferredTheme") ?? "dark";
+        await MonacoEditorHelper.ChangePreferredThemeAsync(theme);
+        await base.OnInitializedAsync();
+    }
+
+    bool IsActive(string href, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix)
+    {
+        var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).ToLower();
+        return navLinkMatch == NavLinkMatch.All ? relativePath == href.ToLower() : relativePath.StartsWith(href.ToLower());
+    }
+
+    async Task OnThemeClickedAsync()
+    {
+        theme = theme == "dark" ? "light" : "dark";
+        await JsInterop.SetThemeAsync(theme);
+    }
+
+}

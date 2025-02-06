@@ -40,8 +40,9 @@ public class DbContext(IServiceProvider serviceProvider, IMongoDatabase database
     public virtual IRepository Set(string typeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+        if(Pluralize.IsPlural(typeName)) typeName = Pluralize.Singularize(typeName);
         if (Repositories.TryGetValue(typeName, out var repository)) return repository;
-        var filter = Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(typeName));
+        var filter = Builders<ProjectionType>.Filter.Regex("_id", new BsonRegularExpression($"^{Regex.Escape(typeName)}$", "i"));
         var type = ProjectionTypes.Find(filter, new FindOptions()).FirstOrDefault() ?? throw new NullReferenceException($"Failed to find a projection type with the specified name '{typeName}'");
         return Set(type);
     }

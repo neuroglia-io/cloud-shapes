@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 namespace CloudShapes.Data.Serialization.Bson;
 
 /// <summary>
-/// Represents the <see cref="SerializerBase{TValue}"/> used to serialize objects
+/// Represents the <see cref="SerializerBase{TValue}"/> used to serialize/deserialize objects to/from BSON
 /// </summary>
 public class ObjectSerializer
     : SerializerBase<object>

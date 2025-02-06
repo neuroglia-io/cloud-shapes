@@ -8,6 +8,7 @@ builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
     static JsonSerializerSettings setup(JsonSerializerSettings settings)
     {
+        settings.NullValueHandling = NullValueHandling.Ignore;
         settings.Converters.Add(new ObjectConverter());
         return settings;
     }
@@ -21,13 +22,13 @@ builder.Services.AddControllers().AddNewtonsoftJson(options =>
 });
 builder.Services.AddMediator(options =>
 {
-    options.ScanAssembly(typeof(CloudShapes.Application.Commands.ProjectionTypes.CreateProjectionTypeCommand).Assembly);
+    options.ScanAssembly(typeof(CloudShapes.Application.Commands.ProjectionTypes.CreateProjectionTypeCommandHandler).Assembly);
 });
 builder.Services.Configure<ApplicationOptions>(builder.Configuration);
 builder.Services.AddSingleton<IMongoClient>(provider =>
 {
     var options = provider.GetRequiredService<IOptions<ApplicationOptions>>().Value;
-    BsonSerializer.RegisterSerializer(new ObjectSerializer(x => true));
+    BsonSerializer.RegisterSerializer(typeof(DateTimeOffset), new DateTimeOffsetBsonSerializer());
     ConventionRegistry.Register("CamelCase", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
     return new MongoClient(options.Database.ConnectionString);
 });

@@ -1,0 +1,83 @@
+﻿@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.List
+@page "/projections/types"
+@using CloudShapes.Dashboard.Pages.ProjectionTypes.List
+@using System.Reactive.Linq
+@using CloudShapes.Dashboard.StateManagement
+@inherits StatefulComponent<ProjectionTypeListStore, ProjectionTypeListState>
+
+<ApplicationTitle>Projection Types</ApplicationTitle>
+
+<div class="table-container">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th class="sticky-header">Sequence</th>
+                <th class="sticky-header">Id</th>
+                <th class="sticky-header">Time</th>
+                <th class="sticky-header">Source</th>
+                <th class="sticky-header">Type</th>
+                <th class="sticky-header">Subject</th>
+                <th class="sticky-header">Data Schema</th>
+                <th class="sticky-header">Content Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            <Virtualize @ref="virtualize" Context="e" ItemsProvider="@Store.ProvideProjectionTypes" ItemSize="61">
+                <ItemContent>
+                    <tr @onclick="async _ => await OnShowCloudEventOffcanvasAsync(e)" class="cursor-pointer">
+                        <td>
+                            <div class="contained">
+                                @(e.ExtensionAttributes?[CloudEventExtensionAttributes.Sequence] ?? "")
+                            </div>
+                        </td>
+                        
+                    </tr>
+                </ItemContent>
+                <Placeholder>
+                    <tr class="row-placeholder">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </Placeholder>
+            </Virtualize>
+        </tbody>
+    </table>
+</div>
+
+<Offcanvas @ref="offcanvas" Size="OffcanvasSize.Large" ReadOnly="true" UseStaticBackdrop="false" />
+
+@code {
+
+    List<ProjectionType> projectionTypes = new();
+    Virtualize<ProjectionType>? virtualize;
+
+    /// <inheritdoc/>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync().ConfigureAwait(false);
+        Observable.CombineLatest<StreamReadOptions, ulong?, bool>(
+            this.Store.ReadOptions,
+            this.Store.TotalCount,
+            (_, _) => true
+        )
+        .Throttle(TimeSpan.FromMilliseconds(300))
+        .SubscribeAsync(async(bool _) => await this.RefreshList(), null!, null!, cancellationToken: this.CancellationTokenSource.Token);
+    }
+
+    /// <summary>
+    /// Patches the <see cref="View"/>'s fields after a <see cref="ProjectionTypeListStore"/>'s change
+    /// </summary>
+    /// <param name="patch">The patch to apply</param>
+    private void OnStateChanged(Action<View> patch)
+    {
+        patch(this);
+        this.StateHasChanged();
+    }
+
+}

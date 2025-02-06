@@ -1,4 +1,6 @@
-﻿namespace CloudShapes.Application.Services;
+﻿using MongoDB.Bson.Serialization;
+
+namespace CloudShapes.Application.Services;
 
 /// <summary>
 /// Represents the default implementation of the <see cref="IRepository"/> interface
@@ -66,6 +68,7 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     public virtual async Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
+        projection = projection.InsertMetadata(new ProjectionMetadata());
         if (Type.Relationships != null)
         {
             foreach (var relationship in Type.Relationships.Where(r => r.Type == ProjectionRelationshipType.OneToOne))
@@ -111,6 +114,9 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     public virtual async Task UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
+        var metadata = BsonSerializer.Deserialize<ProjectionMetadata>(projection[ProjectionMetadata.PropertyName].AsBsonDocument);
+        metadata.Update();
+        projection = projection.InsertMetadata(metadata);
         var projectionId = BsonValue.Create(projection.GetId());
         var result = await Projections.ReplaceOneAsync(Builders<BsonDocument>.Filter.Eq("_id", projectionId), projection, new ReplaceOptions(), cancellationToken).ConfigureAwait(false);
         if (result.MatchedCount < 1) return;
@@ -202,6 +208,12 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
             }
         }
     }
+
+    /// <inheritdoc/>
+    public virtual Task<long> CountAsync(CancellationToken cancellationToken = default) => CountAsync(Builders<BsonDocument>.Filter.Empty, cancellationToken);
+
+    /// <inheritdoc/>
+    public virtual Task<long> CountAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken = default) => Projections.CountDocumentsAsync(filter, new CountOptions(), cancellationToken);
 
     /// <inheritdoc/>
     public virtual async IAsyncEnumerable<BsonDocument> ToListAsync([EnumeratorCancellation] CancellationToken cancellationToken = default) 

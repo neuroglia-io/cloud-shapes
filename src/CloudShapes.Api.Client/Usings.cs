@@ -1,0 +1,14 @@
+﻿global using CloudShapes.Api.Client.Configuration;
+global using CloudShapes.Api.Client.Services;
+global using CloudShapes.Application.Commands.ProjectionTypes;
+global using CloudShapes.Data.Models;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.DependencyInjection.Extensions;
+global using Microsoft.Extensions.Logging;
+global using Microsoft.Extensions.Options;
+global using Neuroglia;
+global using Neuroglia.Eventing.CloudEvents;
+global using Neuroglia.Serialization;
+global using Pluralize.NET;
+global using System.Net.Mime;
+global using System.Text;
