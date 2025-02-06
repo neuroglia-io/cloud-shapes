@@ -17,8 +17,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudShapes.Data", "src\Clo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2D197434-818A-41DD-992C-7778D51808B8}"
 	ProjectSection(SolutionItems) = preProject
+		CODE_OF_CONDUCT.md = CODE_OF_CONDUCT.md
+		CONTRIBUTING.md = CONTRIBUTING.md
 		LICENSE = LICENSE
 		README.md = README.md
+		SECURITY.md = SECURITY.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{CC530B6A-334D-44F3-A757-A57C66F5596D}"

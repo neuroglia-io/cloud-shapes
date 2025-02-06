@@ -30,20 +30,18 @@ public record CloudEventUpdateTriggerDefinition
     /// <summary>
     /// Creates a new <see cref="CloudEventUpdateTriggerDefinition"/> used to replace the current state of the projection it applies to
     /// </summary>
-    /// <param name="name">The <see cref="CloudEventUpdateTriggerDefinition"/>'s name</param>
     /// <param name="e">An object used to configure triggering CloudEvents</param>
     /// <param name="state">A key/value mapping of the state that replaces the current state of the projection</param>
     /// <returns>A new <see cref="CloudEventUpdateTriggerDefinition"/></returns>
-    public static CloudEventUpdateTriggerDefinition FromState(string name, CloudEventFilterDefinition e, EquatableDictionary<string, object> state) => new() { Name = name, Event = e, State = state };
+    public static CloudEventUpdateTriggerDefinition FromState(CloudEventFilterDefinition e, EquatableDictionary<string, object> state) => new() { Event = e, State = state };
 
     /// <summary>
     /// Creates a new <see cref="CloudEventUpdateTriggerDefinition"/> used to patch the current state of the projection it applies to
     /// </summary>
-    /// <param name="name">The <see cref="CloudEventUpdateTriggerDefinition"/>'s name</param>
     /// <param name="e">An object used to configure triggering CloudEvents</param>
     /// <param name="patch">The patch used to update the current state of the projection</param>
     /// <returns>A new <see cref="CloudEventUpdateTriggerDefinition"/></returns>
-    public static CloudEventUpdateTriggerDefinition FromPatch(string name, CloudEventFilterDefinition e, Patch patch) => new() { Name = name, Event = e, Patch = patch };
+    public static CloudEventUpdateTriggerDefinition FromPatch(CloudEventFilterDefinition e, Patch patch) => new() { Event = e, Patch = patch };
 
 
 }
