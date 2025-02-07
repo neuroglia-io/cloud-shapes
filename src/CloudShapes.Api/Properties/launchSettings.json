@@ -4,10 +4,12 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DATABASE__CONNECTIONSTRING": "mongodb://localhost:27017"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5115"
+      "applicationUrl": "http://localhost:5115",
+      "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker",

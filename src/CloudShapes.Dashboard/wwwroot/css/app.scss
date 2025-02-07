@@ -102,3 +102,19 @@ h1:focus {
         border-top: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color) !important;
     }
 }
+
+.bb-sidebar {
+    --bb-sidebar-background-color: var(--bs-dark-bg-subtle);
+}
+
+.bb-sidebar-top-row {
+    --bb-sidebar-top-row-background-color: var(--bs-dark-bg-subtle);
+}
+
+.bb-sidebar-content {
+    height: calc(100vh - calc(100px + 3.5rem)) !important; 
+}
+
+.monaco-editor-container{
+    height: 1100px;
+}

@@ -1,0 +1,29 @@
+﻿@namespace CloudShapes.Dashboard.Components
+@inject IJsonSerializer JsonSerializer
+
+<div class="monaco-editor-container">
+    <MonacoEditor Document="projection" />
+</div>
+
+@code {
+
+    ProjectionType? projectionType;
+    IDictionary<string, object>? projection;
+    bool readOnly;
+
+    [Parameter] public ProjectionType? ProjectionType { get; set; } = null!;
+
+    [Parameter] public IDictionary<string, object>? Projection { get; set; } = null!;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <inheritdoc/>
+    protected override Task OnParametersSetAsync()
+    {
+        if (projectionType != ProjectionType) projectionType = ProjectionType;
+        if (projection != Projection) projection = Projection;
+        if (readOnly != ReadOnly) readOnly = ReadOnly;
+        return base.OnParametersSetAsync();
+    }
+
+}

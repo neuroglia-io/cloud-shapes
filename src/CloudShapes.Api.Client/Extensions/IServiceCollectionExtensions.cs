@@ -12,7 +12,7 @@ public static class IServiceCollectionExtensions
     /// <param name="services">The <see cref="IServiceCollection"/> to configure</param>
     /// <param name="setup">An <see cref="Action{T}"/> used to configure the <see cref="CloudShapesApiClientOptions"/> to use</param>
     /// <returns>The configured <see cref="IServiceCollection"/></returns>
-    public static IServiceCollection AddSynapseHttpApiClient(this IServiceCollection services, Action<CloudShapesApiClientOptions> setup)
+    public static IServiceCollection AddCloudShapesApiClient(this IServiceCollection services, Action<CloudShapesApiClientOptions> setup)
     {
         services.Configure(setup);
         services.AddHttpClient<ICloudShapesApiClient, CloudShapesApiClient>((provider, http) =>

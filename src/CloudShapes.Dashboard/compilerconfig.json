@@ -1,15 +1,11 @@
 ﻿[
   {
-    "outputFile": "wwwroot/css/app.css",
     "inputFile": "wwwroot/css/app.scss",
+    "outputFile": "wwwroot/css/app.css",
     "sourceMap": true
   },
   {
-    "outputFile": "Layout/MainLayout.razor.css",
-    "inputFile": "Layout/MainLayout.razor.scss"
-  },
-  {
-    "outputFile": "Components/ResourceEditor/ResourceEditor.razor.css",
-    "inputFile": "Components/ResourceEditor/ResourceEditor.razor.scss"
+    "inputFile": "Layout/MainLayout.razor.scss",
+    "outputFile": "Layout/MainLayout.razor.css"
   }
 ]

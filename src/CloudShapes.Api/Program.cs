@@ -4,6 +4,7 @@ builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
 });
+builder.Services.AddResponseCompression();
 builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
     static JsonSerializerSettings setup(JsonSerializerSettings settings)
@@ -55,5 +56,6 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.UseRouting();
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 await app.RunAsync();

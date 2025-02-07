@@ -14,6 +14,6 @@ public class DatabaseOptions
     /// <summary>
     /// Gets/sets the database's name
     /// </summary>
-    public virtual string Name { get; set; } = "CloudShapes";
+    public virtual string Name { get; set; } = "cloud-shapes";
 
 }

@@ -64,3 +64,15 @@ tr.row-placeholder td::after {
     animation-timing-function: linear;
     animation-fill-mode: forwards;
 }
+
+tr {
+    th, td {
+        &:first-child {
+            padding-left: 1rem;
+        }
+
+        &:last-child {
+            padding-right: 1rem;
+        }
+    }
+}

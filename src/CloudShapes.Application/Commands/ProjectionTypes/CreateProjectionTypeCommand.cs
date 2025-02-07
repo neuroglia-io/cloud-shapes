@@ -28,7 +28,11 @@ public class CreateProjectionTypeCommandHandler(IMongoDatabase database, IMongoC
     /// <inheritdoc/>
     public virtual async Task<IOperationResult<ProjectionType>> HandleAsync(CreateProjectionTypeCommand command, CancellationToken cancellationToken = default)
     {
-        var projectionType = new ProjectionType(command.Name, command.Schema, command.Triggers, command.Indexes, command.Relationships);
+        var projectionType = new ProjectionType(command.Name, command.Schema, command.Triggers, command.Indexes, command.Relationships)
+        {
+            Summary = command.Summary,
+            Description = command.Description
+        };
         await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
         var collectionName =  Pluralize.Pluralize(projectionType.Name);
         var collectionNames = await (await Database.ListCollectionNamesAsync(new ListCollectionNamesOptions(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);

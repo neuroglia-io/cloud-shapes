@@ -42,7 +42,14 @@ public record ProjectionType
     public virtual string Name { get; set; } = null!;
 
     /// <summary>
-    /// Gets/sets the projection type's description, if any
+    /// Gets/sets a short, concise description of the projection type<para></para>
+    /// Supports Markdown
+    /// </summary>
+    public virtual string? Summary { get; set; }
+
+    /// <summary>
+    /// Gets/sets the projection type's description, if any<para></para>
+    /// Supports Markdown
     /// </summary>
     public virtual string? Description { get; set; }
 

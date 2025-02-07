@@ -13,6 +13,18 @@ public class CreateProjectionTypeCommand
     public virtual string Name { get; set; } = null!;
 
     /// <summary>
+    /// Gets/sets a short, concise description of the projection type<para></para>
+    /// Supports Markdown
+    /// </summary>
+    public virtual string? Summary { get; set; }
+
+    /// <summary>
+    /// Gets/sets the projection type's description, if any<para></para>
+    /// Supports Markdown
+    /// </summary>
+    public virtual string? Description { get; set; }
+
+    /// <summary>
     /// Gets/sets the schema that defines, documents and validates the state of projections of this type
     /// </summary>
     public virtual JSchema Schema { get; set; } = null!;

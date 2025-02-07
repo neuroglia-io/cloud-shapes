@@ -22,6 +22,6 @@ public interface IProjectionsApiClient
     /// <param name="queryOptions">The query's options</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="PagedResult{T}"/> that wraps filtered projections</returns>
-    Task<PagedResult<object>> ListAsync(string type, QueryOptions? queryOptions = null, CancellationToken cancellationToken = default);
+    Task<PagedResult<IDictionary<string, object>>> ListAsync(string type, QueryOptions? queryOptions = null, CancellationToken cancellationToken = default);
 
 }

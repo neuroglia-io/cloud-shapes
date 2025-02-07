@@ -1,5 +1,5 @@
 # Monaco Editor - Prebuilt YAML support
-A prebuilt version of [monaco-yaml](https://github.com/remcohaszing/monaco-yaml) available straight out in the browser.
+A prebuilt version of [monaco-yaml](https://github.com/remcohaszing/monaco-yaml) available straight in the browser.
 
 # Usage
 You can use it straight out of the box, just load the precompiled `monaco-editor.js` in your browser.
@@ -67,7 +67,7 @@ const diagnosticsOptions = {
 };
 
 // YAML specific API
-monacoYaml.setDiagnosticsOptions(diagnosticsOptions);
+monacoYaml.configureMonacoYaml(monaco, diagnosticsOptions);
 
 const yaml = 'p1: \np2: \n';
 

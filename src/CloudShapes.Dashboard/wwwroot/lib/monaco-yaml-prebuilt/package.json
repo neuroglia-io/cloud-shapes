@@ -1,6 +1,6 @@
 {
   "name": "monaco-yaml-prebuilt",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Compiled monaco-yaml for direct in-browser use",
   "license": "MIT",
   "main": "./dist/monaco-editor.js",
@@ -11,14 +11,14 @@
     "build": "webpack --mode production"
   },
   "devDependencies": {
-    "css-loader": "^6.7.3",
+    "css-loader": "^7.1.2",
     "http-server": "^14.1.1",
-    "monaco-editor": "^0.34.1",
-    "monaco-editor-webpack-plugin": "^7.0.1",
-    "monaco-yaml": "^4.0.3",
-    "style-loader": "^3.3.1",
-    "webpack": "^5.76.1",
-    "webpack-cli": "^5.0.1"
+    "monaco-editor": "^0.52.2",
+    "monaco-editor-webpack-plugin": "^7.1.0",
+    "monaco-yaml": "^5.2.2",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
   },
   "keywords": [
     "monaco",

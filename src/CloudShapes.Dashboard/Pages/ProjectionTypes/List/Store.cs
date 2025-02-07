@@ -35,12 +35,12 @@ public class ProjectionTypeListStore(ICloudShapesApiClient cloudShapesApi)
     /// </summary>
     /// <param name="request">The <see cref="ItemsProviderRequest"/> to execute</param>
     /// <returns>The resulting <see cref="ItemsProviderResult{TResult}"/></returns>
-    public async ValueTask<ItemsProviderResult<ProjectionType>> ProvideProjectionTypes(ItemsProviderRequest request)
+    public async ValueTask<ItemsProviderResult<ProjectionType>> ProvideProjectionTypesAsync(ItemsProviderRequest request)
     {
         this.SetLoading(true);
-        var fetchedProjectionTypes = ;
+        var fetchedProjectionTypes = await cloudShapesApi.ProjectionTypes.ListAsync();
         this.SetLoading(false);
-        return new ItemsProviderResult<ProjectionType>(fetchedProjectionTypes, totalCount);
+        return new ItemsProviderResult<ProjectionType>(fetchedProjectionTypes.Items, (int)fetchedProjectionTypes.TotalCount);
     }
 
 }
