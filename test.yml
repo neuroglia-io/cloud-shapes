@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '.github/**'
+      - '**/*.md'
+      - 'assets/**'
+      - 'deployments/**'
+  workflow_call:
+
+env:
+  SOLUTION: ./CloudStreams.sln
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-version: ['9.0.x' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+
+      - name: Restore
+        run: dotnet restore "${{ env.SOLUTION }}"
+
+      - name: Test
+        run: dotnet test "${{ env.SOLUTION }}" --no-restore --verbosity normal"
