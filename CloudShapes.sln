@@ -32,8 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{CC53
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{1EEF9640-03FC-40B7-856C-41F2676537D7}"
 	ProjectSection(SolutionItems) = preProject
-		build.yml = build.yml
-		test.yml = test.yml
+		.github\workflows\build.yml = .github\workflows\build.yml
+		.github\workflows\test.yml = .github\workflows\test.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEMPLATE", "{54AD138E-F022-445E-8E41-10E791963BDD}"
