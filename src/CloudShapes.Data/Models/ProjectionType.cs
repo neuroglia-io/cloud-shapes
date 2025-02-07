@@ -31,6 +31,11 @@ public record ProjectionType
     }
 
     /// <summary>
+    /// Gets/sets the <see cref="ProjectionType"/>'s metadata
+    /// </summary>
+    public virtual ProjectionTypeMetadata Metadata { get; set; } = new();
+
+    /// <summary>
     /// Gets/sets the projection type's name
     /// </summary>
     [BsonId]

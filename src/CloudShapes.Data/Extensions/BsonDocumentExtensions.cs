@@ -226,18 +226,18 @@ public static partial class BsonDocumentExtensions
     }
 
     /// <summary>
-    /// Inserts <see cref="ProjectionMetadata"/> into the <see cref="BsonDocument"/>
+    /// Inserts <see cref="DocumentMetadata"/> into the <see cref="BsonDocument"/>
     /// </summary>
     /// <param name="document">The extended <see cref="BsonDocument"/></param>
     /// <returns>The updated <see cref="BsonDocument"/></returns>
-    public static BsonDocument InsertMetadata(this BsonDocument document, ProjectionMetadata metadata)
+    public static BsonDocument InsertMetadata(this BsonDocument document, DocumentMetadata metadata)
     {
         var newDocument = new BsonDocument();
         if (document.Contains("_id")) newDocument["_id"] = document["_id"];
-        newDocument[ProjectionMetadata.PropertyName] = metadata.ToBsonDocument();
+        newDocument[DocumentMetadata.PropertyName] = metadata.ToBsonDocument();
         foreach (var element in document.Elements)
         {
-            if (element.Name == "_id" || element.Name == ProjectionMetadata.PropertyName) continue;
+            if (element.Name == "_id" || element.Name == DocumentMetadata.PropertyName) continue;
             newDocument[element.Name] = element.Value;
         }
         return newDocument;

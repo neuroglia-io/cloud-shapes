@@ -68,7 +68,7 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     public virtual async Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
-        projection = projection.InsertMetadata(new ProjectionMetadata());
+        projection = projection.InsertMetadata(new DocumentMetadata());
         if (Type.Relationships != null)
         {
             foreach (var relationship in Type.Relationships.Where(r => r.Type == ProjectionRelationshipType.OneToOne))
@@ -84,6 +84,8 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
             }
         }
         await Projections.InsertOneAsync(projection, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        Type.Metadata.ProjectionCount++;
+        await ProjectionTypes.UpdateOneAsync(Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(Type.Name)), Builders<ProjectionType>.Update.Set($"{nameof(ProjectionType.Metadata).ToCamelCase()}.{nameof(ProjectionTypeMetadata.ProjectionCount).ToCamelCase()}", BsonValue.Create(Type.Metadata.ProjectionCount)), new UpdateOptions(), cancellationToken).ConfigureAwait(false);
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
         var relatedProjectionTypesFilter = relatedProjectionTypesFilterBuilder.ElemMatch(nameof(ProjectionType.Relationships).ToCamelCase(), relatedProjectionTypesFilterBuilder.And(
             relatedProjectionTypesFilterBuilder.Eq(nameof(ProjectionRelationshipDefinition.Type).ToCamelCase(), ProjectionRelationshipType.OneToMany),
@@ -114,7 +116,7 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     public virtual async Task UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
-        var metadata = BsonSerializer.Deserialize<ProjectionMetadata>(projection[ProjectionMetadata.PropertyName].AsBsonDocument);
+        var metadata = BsonSerializer.Deserialize<DocumentMetadata>(projection[DocumentMetadata.PropertyName].AsBsonDocument);
         metadata.Update();
         projection = projection.InsertMetadata(metadata);
         var projectionId = BsonValue.Create(projection.GetId());
@@ -170,6 +172,8 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
             return;
         }
         await Projections.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", BsonValue.Create(id)), new DeleteOptions(), cancellationToken).ConfigureAwait(false);
+        Type.Metadata.ProjectionCount--;
+        await ProjectionTypes.UpdateOneAsync(Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(Type.Name)), Builders<ProjectionType>.Update.Set($"{nameof(ProjectionType.Metadata).ToCamelCase()}.{nameof(ProjectionTypeMetadata.ProjectionCount).ToCamelCase()}", BsonValue.Create(Type.Metadata.ProjectionCount)), new UpdateOptions(), cancellationToken).ConfigureAwait(false);
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
         var relatedProjectionTypesFilter = relatedProjectionTypesFilterBuilder.ElemMatch(nameof(ProjectionType.Relationships).ToCamelCase(), relatedProjectionTypesFilterBuilder.Eq(nameof(ProjectionRelationshipDefinition.Target).ToCamelCase(), Type.Name));
         var relatedProjectionTypes = await (await ProjectionTypes.FindAsync(relatedProjectionTypesFilter, new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
