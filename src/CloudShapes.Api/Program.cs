@@ -46,6 +46,14 @@ builder.Services.AddSingleton<ISchemaValidator, SchemaValidator>();
 builder.Services.AddSingleton<IDbContext, DbContext>();
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+app.UseResponseCompression();
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
+app.UseRouting();
 app.MapControllers();
 
 await app.RunAsync();
