@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace CloudShapes.Api.Client;
+﻿namespace CloudShapes.Api.Client;
 
 /// <summary>
 /// Defines extensions for <see cref="QueryOptions"/>
@@ -19,6 +17,12 @@ public static class QueryOptionsExtensions
         var queryParams = new List<string>();
         if (options.Limit.HasValue) queryParams.Add($"limit={options.Limit.Value}");
         if (options.Skip.HasValue) queryParams.Add($"skip={options.Skip.Value}");
+        if (!string.IsNullOrWhiteSpace(options.Search)) queryParams.Add($"search={options.Search}");
+        if (!string.IsNullOrWhiteSpace(options.OrderBy))
+        {
+            queryParams.Add($"search={options.OrderBy}");
+            if (options.Descending) queryParams.Add("descending=true");
+        }
         if (options.Filters != null && options.Filters.Count != 0)
         {
             foreach (var filter in options.Filters)
@@ -28,7 +32,7 @@ public static class QueryOptionsExtensions
                 queryParams.Add($"filters[{encodedKey}]={encodedValue}");
             }
         }
-        return queryParams.Count != 0 ? "?" + string.Join("&", queryParams) : string.Empty;
+        return queryParams.Count != 0 ? string.Join("&", queryParams) : string.Empty;
     }
 
 }

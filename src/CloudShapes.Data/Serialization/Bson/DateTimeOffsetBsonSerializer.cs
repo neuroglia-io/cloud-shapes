@@ -10,20 +10,14 @@ public class DateTimeOffsetBsonSerializer
     : SerializerBase<DateTimeOffset>
 {
 
-    /// <summary>
-    /// Serializes a <see cref="DateTimeOffset"/> as an ISO 8601 string
-    /// </summary>
-    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset value)
-    {
-        context.Writer.WriteString(value.ToString("o"));
-    }
+    /// <inheritdoc/>
+    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset value) => context.Writer.WriteString(value.ToString("o"));
 
-    /// <summary>
-    /// Deserializes a <see cref="DateTimeOffset"/> from a BSON string
-    /// </summary>
+    /// <inheritdoc/>
     public override DateTimeOffset Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var value = context.Reader.ReadString();
         return DateTimeOffset.Parse(value);
     }
+
 }

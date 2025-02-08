@@ -24,7 +24,7 @@ public record CloudEventUpdateTriggerDefinition
     /// <summary>
     /// Gets the update strategy to use
     /// </summary>
-    
+    [JsonIgnore]
     public virtual string Strategy => this.State == null ? this.Patch == null ? throw new Exception("Either 'state' or 'patch' must be configured") : ProjectionUpdateStrategy.Patch : ProjectionUpdateStrategy.Replace;
 
     /// <summary>

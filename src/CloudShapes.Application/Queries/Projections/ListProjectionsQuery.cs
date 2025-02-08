@@ -25,7 +25,7 @@ public class ListProjectionsQuery(string type, QueryOptions options)
 /// Represents the service used to handle <see cref="ListProjectionsQuery"/> instances
 /// </summary>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
-public class ListProjectionsQueryHandler(IDbContext dbContext)
+public class ListProjectionsQueryHandler(IDbContext dbContext, IJsonSerializer jsonSerializer)
     : IQueryHandler<ListProjectionsQuery, PagedResult<object>>
 {
 
@@ -34,11 +34,13 @@ public class ListProjectionsQueryHandler(IDbContext dbContext)
     /// </summary>
     protected IDbContext DbContext { get; } = dbContext;
 
+    protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
+
     /// <inheritdoc/>
     public virtual async Task<IOperationResult<PagedResult<object>>> HandleAsync(ListProjectionsQuery query, CancellationToken cancellationToken = default)
     {
         var set = DbContext.Set(query.Type);
-        var filter = query.Options.BuildFilter<BsonDocument>();
+        var filter = query.Options.BuildFilter<BsonDocument>(set.Type);
         var totalCount = await set.CountAsync(filter, cancellationToken).ConfigureAwait(false);
         var cursor = await set.FindAsync(filter, cancellationToken).ConfigureAwait(false);
         var results = cursor.ToAsyncEnumerable(cancellationToken);

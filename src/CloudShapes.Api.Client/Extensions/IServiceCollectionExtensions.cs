@@ -20,6 +20,24 @@ public static class IServiceCollectionExtensions
             var apiClientOptions = provider.GetRequiredService<IOptions<CloudShapesApiClientOptions>>().Value;
             http.BaseAddress = apiClientOptions.BaseAddress;
         });
+        services.TryAddSingleton(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<CloudShapesApiClientOptions>>().Value;
+            var connection = new HubConnectionBuilder()
+                .WithUrl(new Uri(options.BaseAddress, "api/ws/events"))
+                .WithAutomaticReconnect()
+                .AddJsonProtocol(options =>
+                {
+                    options.PayloadSerializerOptions = new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    };
+                    options.PayloadSerializerOptions.Converters.Add(new ObjectConverter());
+                })
+                .Build();
+            return new CloudEventHubClient(connection);
+        });
         services.TryAddSingleton<IPluralize>(provider => new Pluralizer());
         return services;
     }

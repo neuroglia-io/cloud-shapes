@@ -7,6 +7,11 @@ public interface IRepository
 {
 
     /// <summary>
+    /// Gets the type of projections managed by the <see cref="IRepository"/>
+    /// </summary>
+    ProjectionType Type { get; }
+
+    /// <summary>
     /// Determines whether or not the specified projection exists
     /// </summary>
     /// <param name="id">The id of the projection to check</param>

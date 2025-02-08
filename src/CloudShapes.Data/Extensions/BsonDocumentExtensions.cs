@@ -1,4 +1,4 @@
-﻿using CloudShapes.Data.Models;
+﻿using MongoDB.Bson.IO;
 
 namespace CloudShapes.Data;
 
@@ -241,6 +241,21 @@ public static partial class BsonDocumentExtensions
             newDocument[element.Name] = element.Value;
         }
         return newDocument;
+    }
+
+    /// <summary>
+    /// Gets the projection's state
+    /// </summary>
+    /// <param name="document">The <see cref="BsonDocument"/> to extract the projection's state from</param>
+    /// <param name="serializer">The <see cref="IJsonSerializer"/> used to deserialize the projection's state</param>
+    /// <returns>The projection's state</returns>
+    public static object GetState(this BsonDocument document, IJsonSerializer serializer)
+    {
+        var state = document.DeepClone().AsBsonDocument;
+        state.Remove("_id");
+        state.Remove(DocumentMetadata.PropertyName);
+        var json = state.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson });
+        return serializer.Deserialize<object>(json)!;
     }
 
     [GeneratedRegex(@"\[(\d+)\]$", RegexOptions.Compiled)]

@@ -1,8 +1,13 @@
-﻿global using CloudShapes.Data.Serialization.Bson;
+﻿global using CloudShapes.Data.Models;
+global using Json.Schema;
 global using MongoDB.Bson;
 global using MongoDB.Bson.Serialization.Attributes;
 global using Neuroglia;
 global using Neuroglia.Data;
-global using Newtonsoft.Json.Schema;
+global using Neuroglia.Eventing.CloudEvents;
+global using Neuroglia.Serialization;
+global using System;
 global using System.Collections.Generic;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
 global using System.Text.RegularExpressions;

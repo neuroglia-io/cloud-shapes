@@ -14,13 +14,18 @@ public class SchemaValidator(IJsonSerializer jsonSerializer)
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
 
     /// <inheritdoc/>
-    public virtual Task<IOperationResult> ValidateAsync(object input, JSchema schema, CancellationToken cancellationToken = default)
+    public virtual Task<IOperationResult> ValidateAsync(object input, JsonSchema schema, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(schema);
-        var toValidate = (JObject)JsonSerializer.Convert(input, typeof(JObject))!;
-        if (toValidate.IsValid(schema, errors: out var errors)) return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.OK));
-        else return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.UnprocessableEntity, errors: errors.Select(e => e.ToError()).ToArray()));
+        var node = JsonSerializer.SerializeToNode(input);
+        var evaluationOptions = new EvaluationOptions()
+        {
+            OutputFormat = OutputFormat.List
+        };
+        var evaluationResults = schema.Evaluate(node, evaluationOptions);
+        if (evaluationResults.IsValid) return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.OK));
+        else return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.UnprocessableEntity, errors: evaluationResults.Errors?.Select(e => new Error(new("io.cloud-shapes.errors.invalid"), "Invalid", (int)HttpStatusCode.UnprocessableEntity, e.Value, new(e.Key, UriKind.Relative))).ToArray()!));
     }
 
 }

@@ -6,7 +6,7 @@ namespace CloudShapes.Api.Controllers;
 /// Represents the controller used to manage CloudEvents
 /// </summary>
 /// <param name="mediator">The service used to mediate calls</param>
-[Route($"{ApiDefaults.Routing.RoutePrefix}/[controller]")]
+[ApiController, Route($"{ApiDefaults.Routing.RoutePrefix}/[controller]")]
 public class EventsController(IMediator mediator)
     : Controller
 {

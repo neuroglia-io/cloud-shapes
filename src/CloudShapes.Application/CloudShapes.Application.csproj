@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="3.1.0" />
     <PackageReference Include="Neuroglia.Data.Expressions.Abstractions" Version="4.19.2" />
+    <PackageReference Include="Neuroglia.Eventing.CloudEvents.Infrastructure" Version="4.19.2" />
     <PackageReference Include="Neuroglia.Mediation" Version="4.19.2" />
     <PackageReference Include="Pluralize.NET" Version="1.0.2" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />

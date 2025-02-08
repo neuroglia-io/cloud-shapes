@@ -1,17 +1,19 @@
-﻿using MongoDB.Bson.Serialization;
-
-namespace CloudShapes.Application.Services;
+﻿namespace CloudShapes.Application.Services;
 
 /// <summary>
 /// Represents the default implementation of the <see cref="IRepository"/> interface
 /// </summary>
 /// <param name="logger">The service used to perform logging</param>
+/// <param name="options">The service used to access the current <see cref="ApplicationOptions"/></param>
 /// <param name="database">The current <see cref="IMongoDatabase"/></param>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
 /// <param name="projections">The <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/></param>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
+/// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
+/// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 /// <param name="type">The type of projections managed by the <see cref="IRepository"/></param>
-public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IMongoCollection<BsonDocument> projections, IDbContext dbContext, ProjectionType type)
+public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, 
+    IMongoCollection<BsonDocument> projections, IDbContext dbContext, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
     : IRepository
 {
 
@@ -19,6 +21,11 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     /// Gets the service used to perform logging
     /// </summary>
     protected ILogger Logger { get; } = logger;
+
+    /// <summary>
+    /// Gets the current <see cref="ApplicationOptions"/>
+    /// </summary>
+    protected ApplicationOptions Options { get; } = options.Value;
 
     /// <summary>
     /// Gets the current <see cref="IMongoDatabase"/>
@@ -41,9 +48,19 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     protected IDbContext DbContext { get; } = dbContext;
 
     /// <summary>
+    /// Gets the service used to observe both inbound and outbound <see cref="CloudEvent"/>s
+    /// </summary>
+    protected ICloudEventBus CloudEventBus { get; } = cloudEventBus;
+
+    /// <summary>
+    /// Gets the service used to serialize/deserialize data to/from JSON
+    /// </summary>
+    protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
+
+    /// <summary>
     /// Gets the type of projections managed by the <see cref="IRepository"/>
     /// </summary>
-    protected ProjectionType Type { get; } = type;
+    public ProjectionType Type { get; } = type;
 
     /// <inheritdoc/>
     public virtual async Task<bool> ContainsAsync(string id, CancellationToken cancellationToken = default)
@@ -62,12 +79,23 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     }
 
     /// <inheritdoc/>
-    public virtual Task<IAsyncCursor<BsonDocument>> FindAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken = default) => Projections.FindAsync(filter, new FindOptions<BsonDocument, BsonDocument>(), cancellationToken);
+    public virtual async Task<IAsyncCursor<BsonDocument>> FindAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await Projections.FindAsync(filter, new FindOptions<BsonDocument, BsonDocument>(), cancellationToken);
+        }
+        catch (MongoCommandException ex) when (ex.CodeName == "IndexNotFound")
+        {
+            return new EmptyAsyncCursor<BsonDocument>();
+        }
+    }
 
     /// <inheritdoc/>
     public virtual async Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
+        var projectionId = projection["_id"].ToString()!;
         projection = projection.InsertMetadata(new DocumentMetadata());
         if (Type.Relationships != null)
         {
@@ -84,6 +112,16 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
             }
         }
         await Projections.InsertOneAsync(projection, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        CloudEventBus.OutputStream.OnNext(new CloudEvent()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Time = DateTimeOffset.Now,
+            Source = Options.Events.Source,
+            Type = CloudEvents.Projections.Created.V1.Type,
+            Subject = projectionId,
+            DataContentType = MediaTypeNames.Application.Json,
+            Data = new ProjectionCreatedEvent(projectionId, Type.Name, projection.GetState(JsonSerializer))
+        });
         Type.Metadata.ProjectionCount++;
         await ProjectionTypes.UpdateOneAsync(Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(Type.Name)), Builders<ProjectionType>.Update.Set($"{nameof(ProjectionType.Metadata).ToCamelCase()}.{nameof(ProjectionTypeMetadata.ProjectionCount).ToCamelCase()}", BsonValue.Create(Type.Metadata.ProjectionCount)), new UpdateOptions(), cancellationToken).ConfigureAwait(false);
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
@@ -121,6 +159,16 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
         projection = projection.InsertMetadata(metadata);
         var projectionId = BsonValue.Create(projection.GetId());
         var result = await Projections.ReplaceOneAsync(Builders<BsonDocument>.Filter.Eq("_id", projectionId), projection, new ReplaceOptions(), cancellationToken).ConfigureAwait(false);
+        CloudEventBus.OutputStream.OnNext(new CloudEvent()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Time = DateTimeOffset.Now,
+            Source = Options.Events.Source,
+            Type = CloudEvents.Projections.Updated.V1.Type,
+            Subject = projectionId.ToString(),
+            DataContentType = MediaTypeNames.Application.Json,
+            Data = new ProjectionUpdatedEvent(projectionId.ToString()!, Type.Name, projection.GetState(JsonSerializer))
+        });
         if (result.MatchedCount < 1) return;
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
         var relatedProjectionTypesFilter = relatedProjectionTypesFilterBuilder.ElemMatch(nameof(ProjectionType.Relationships).ToCamelCase(), relatedProjectionTypesFilterBuilder.Eq(nameof(ProjectionRelationshipDefinition.Target).ToCamelCase(), Type.Name));
@@ -172,6 +220,16 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
             return;
         }
         await Projections.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", BsonValue.Create(id)), new DeleteOptions(), cancellationToken).ConfigureAwait(false);
+        CloudEventBus.OutputStream.OnNext(new CloudEvent()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Time = DateTimeOffset.Now,
+            Source = Options.Events.Source,
+            Type = CloudEvents.Projections.Deleted.V1.Type,
+            Subject = id,
+            DataContentType = MediaTypeNames.Application.Json,
+            Data = new ProjectionDeletedEvent(id, Type.Name),
+        });
         Type.Metadata.ProjectionCount--;
         await ProjectionTypes.UpdateOneAsync(Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(Type.Name)), Builders<ProjectionType>.Update.Set($"{nameof(ProjectionType.Metadata).ToCamelCase()}.{nameof(ProjectionTypeMetadata.ProjectionCount).ToCamelCase()}", BsonValue.Create(Type.Metadata.ProjectionCount)), new UpdateOptions(), cancellationToken).ConfigureAwait(false);
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
@@ -217,7 +275,17 @@ public class Repository(ILogger<Repository> logger, IMongoDatabase database, IMo
     public virtual Task<long> CountAsync(CancellationToken cancellationToken = default) => CountAsync(Builders<BsonDocument>.Filter.Empty, cancellationToken);
 
     /// <inheritdoc/>
-    public virtual Task<long> CountAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken = default) => Projections.CountDocumentsAsync(filter, new CountOptions(), cancellationToken);
+    public virtual async Task<long> CountAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await Projections.CountDocumentsAsync(filter, new CountOptions(), cancellationToken);
+        }
+        catch (MongoCommandException ex) when(ex.CodeName == "IndexNotFound")
+        {
+            return 0;
+        }
+    }
 
     /// <inheritdoc/>
     public virtual async IAsyncEnumerable<BsonDocument> ToListAsync([EnumeratorCancellation] CancellationToken cancellationToken = default) 

@@ -36,4 +36,9 @@ public record ProjectionListState
     /// </summary>
     public PagedResult<IDictionary<string, object>>? Projections { get; set; }
 
+    /// <summary>
+    /// Gets/sets a list that contains the ids of all selected projections
+    /// </summary>
+    public EquatableList<string> SelectedProjections { get; set; } = [];
+
 }

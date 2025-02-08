@@ -27,7 +27,7 @@ public class CreateProjectionTypeCommand
     /// <summary>
     /// Gets/sets the schema that defines, documents and validates the state of projections of this type
     /// </summary>
-    public virtual JSchema Schema { get; set; } = null!;
+    public virtual JsonSchema Schema { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for creating new projections when specific CloudEvents occur
@@ -43,5 +43,10 @@ public class CreateProjectionTypeCommand
     /// Gets/sets a list containing the relationships, if any, of projections of this type
     /// </summary>
     public virtual IReadOnlyCollection<ProjectionRelationshipDefinition>? Relationships { get; set; }
+
+    /// <summary>
+    /// Gets/sets a key/value mapping of the tags, if any, associated to the projection type
+    /// </summary>
+    public virtual IDictionary<string, string>? Tags { get; set; }
 
 }

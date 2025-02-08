@@ -30,7 +30,7 @@ public record ProjectionRelationshipDefinition
     /// <summary>
     /// Gets a boolean indicating whether the path to the relationship's foreign key is aligned with the path to its navigation property
     /// </summary>
-    [BsonIgnore]
+    [JsonIgnore, BsonIgnore]
     public bool IsForeignKeyPathAligned => Key.Equals(Path);
 
 }

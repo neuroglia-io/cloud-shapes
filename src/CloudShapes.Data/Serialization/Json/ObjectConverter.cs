@@ -1,71 +1,126 @@
-﻿using Newtonsoft.Json;
-using System.Dynamic;
+﻿using System.Globalization;
 
 namespace CloudShapes.Data.Serialization.Json;
 
 /// <summary>
-/// Represents the <see cref="JsonConverter"/> used to serialize/deserialize objects and <see cref="ExpandoObject"/>s
+/// Represents the service used to serialize/deserialize objects to/from JSON
 /// </summary>
 public class ObjectConverter 
-    : JsonConverter
+    : JsonConverter<object>
 {
 
-    /// <inheritdoc/>
-    public override bool CanConvert(Type objectType) => objectType == typeof(object) || objectType == typeof(IDictionary<string, object>);
+    public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(object) || typeof(IDictionary<string, object>).IsAssignableFrom(typeToConvert);
 
     /// <inheritdoc/>
-    public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+    public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => ReadValue(ref reader);
+
+    static object? ReadValue(ref Utf8JsonReader reader)
     {
-        if (reader.TokenType == JsonToken.StartObject) return ReadObject(reader, serializer);
-        else if (reader.TokenType == JsonToken.StartArray) return ReadArray(reader, serializer);
-        else return serializer.Deserialize(reader);
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.StartObject:
+                return ReadObject(ref reader);
+            case JsonTokenType.StartArray:
+                return ReadArray(ref reader);
+            case JsonTokenType.String:
+                return reader.GetString();
+            case JsonTokenType.Number:
+                if (reader.TryGetInt64(out var l)) return l;
+                return reader.GetDouble();
+            case JsonTokenType.True:
+                return true;
+            case JsonTokenType.False:
+                return false;
+            case JsonTokenType.Null:
+                return null;
+            default:
+                ThrowJsonException(reader.TokenType);
+                return null;
+        }
     }
 
-    /// <summary>
-    /// Reads and converts a JSON object into an IDictionary<string, object>.
-    /// </summary>
-    protected virtual IDictionary<string, object> ReadObject(JsonReader reader, JsonSerializer serializer)
+    static Dictionary<string, object> ReadObject(ref Utf8JsonReader reader)
     {
-        var dictionary = new Dictionary<string, object>();
+        var dictionary = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         while (reader.Read())
         {
-            if (reader.TokenType == JsonToken.EndObject)  return dictionary;
-            if (reader.TokenType == JsonToken.PropertyName)
+            if (reader.TokenType == JsonTokenType.EndObject) return dictionary;
+            if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                var propertyName = reader.Value?.ToString();
-                if (string.IsNullOrWhiteSpace(propertyName)) continue;
+                var propertyName = reader.GetString()!;
                 reader.Read();
-                dictionary[propertyName] = ReadValue(reader, serializer);
+                dictionary[propertyName] = ReadValue(ref reader)!;
             }
         }
+        ThrowJsonException(JsonTokenType.StartObject);
         return dictionary;
     }
 
-    /// <summary>
-    /// Reads and converts a JSON array into a List<object>, recursively converting JObjects inside.
-    /// </summary>
-    protected virtual List<object> ReadArray(JsonReader reader, JsonSerializer serializer)
+    private static List<object> ReadArray(ref Utf8JsonReader reader)
     {
         var list = new List<object>();
         while (reader.Read())
         {
-            if (reader.TokenType == JsonToken.EndArray) return list;
-            list.Add(ReadValue(reader, serializer));
+            if (reader.TokenType == JsonTokenType.EndArray)
+                return list;
+
+            list.Add(ReadValue(ref reader)!);
         }
+        ThrowJsonException(JsonTokenType.StartArray);
         return list;
     }
 
-    /// <summary>
-    /// Recursively reads a JSON value, converting nested objects to dictionaries and arrays to lists.
-    /// </summary>
-    private object ReadValue(JsonReader reader, JsonSerializer serializer)
-    {
-        if (reader.TokenType == JsonToken.StartObject) return ReadObject(reader, serializer);
-        else if (reader.TokenType == JsonToken.StartArray) return ReadArray(reader, serializer);
-        else return serializer.Deserialize(reader)!;
-    }
+    static void ThrowJsonException(JsonTokenType tokenType) => throw new JsonException($"Invalid JSON structure: Expected {tokenType}");
 
     /// <inheritdoc/>
-    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) => serializer.Serialize(writer, value);
+    public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+    {
+        switch (value)
+        {
+            case IEnumerable<object> list:
+                writer.WriteStartArray();
+                foreach (var item in list) Write(writer, item, options);
+                writer.WriteEndArray();
+                break;
+            case string s:
+                writer.WriteStringValue(s);
+                break;
+            case short s:
+                writer.WriteNumberValue(s);
+                break;
+            case int i:
+                writer.WriteNumberValue(i);
+                break;
+            case long l:
+                writer.WriteNumberValue(l);
+                break;
+            case double d:
+                writer.WriteNumberValue(d);
+                break;
+            case Decimal128 d:
+                var raw = d.ToString();
+                if (decimal.TryParse(raw, CultureInfo.InvariantCulture, out var @decimal)) writer.WriteNumberValue(@decimal);
+                else writer.WriteNumberValue(double.Parse(raw));
+                break;
+            case bool b:
+                writer.WriteBooleanValue(b);
+                break;
+            case null:
+                writer.WriteNullValue();
+                break;
+            case IDictionary<string, object>:
+            default:
+                var t = value.GetType();
+                if (value is not IDictionary<string, object> dictionary) dictionary = value.ToDictionary()!;
+                writer.WriteStartObject();
+                foreach (var kvp in dictionary)
+                {
+                    writer.WritePropertyName(kvp.Key);
+                    Write(writer, kvp.Value, options);
+                }
+                writer.WriteEndObject();
+                break;
+        }
+    }
 
 }

@@ -1,5 +1,4 @@
 ﻿using CloudShapes.Application.Commands.ProjectionTypes;
-using CloudShapes.Application.Queries;
 using CloudShapes.Application.Queries.ProjectionTypes;
 
 namespace CloudShapes.Api.Controllers;
@@ -8,7 +7,7 @@ namespace CloudShapes.Api.Controllers;
 /// Represents the controller used to manage projection types
 /// </summary>
 /// <param name="mediator">The service used to mediate calls</param>
-[Route($"{ApiDefaults.Routing.RoutePrefix}/projections/types")]
+[ApiController, Route($"{ApiDefaults.Routing.RoutePrefix}/projections/types")]
 public class ProjectionTypesController(IMediator mediator)
     : Controller
 {

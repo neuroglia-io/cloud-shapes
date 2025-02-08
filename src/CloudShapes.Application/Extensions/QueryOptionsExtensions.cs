@@ -11,11 +11,44 @@ public static class QueryOptionsExtensions
     /// </summary>
     /// <typeparam name="T">The type of data to build the <see cref="FilterDefinition{TDocument}"/> for</typeparam>
     /// <param name="queryOptions">The extended <see cref="QueryOptions"/></param>
+    /// <param name="type">The type of projection to build the <see cref="FilterDefinition{TDocument}"/> for</param>
     /// <returns>A new <see cref="FilterDefinition{TDocument}"/></returns>
-    public static FilterDefinition<T> BuildFilter<T>(this QueryOptions queryOptions)
+    public static FilterDefinition<T> BuildFilter<T>(this QueryOptions queryOptions, ProjectionType? type = null)
     {
         var builder = Builders<T>.Filter;
         var filter = builder.Empty;
+        if (!string.IsNullOrWhiteSpace(queryOptions.Search))
+        {
+            var searchRegex = new BsonRegularExpression(Regex.Escape(queryOptions.Search), "i");
+            if (typeof(T) == typeof(BsonDocument))
+            {
+                if (type == null)
+                {
+                    filter &= Builders<T>.Filter.Text(queryOptions.Search, new TextSearchOptions() { CaseSensitive = false, DiacriticSensitive = false });
+                }
+                else
+                {
+                    var properties = new List<string>()
+                    {
+                        { "_id" },
+                        { "_metadata.createdAt" },
+                        { "_metadata.lastModified" },
+                        { "_metadata.version" }
+                    };
+                    properties.AddRange(type.Schema.GetPrimitiveProperties());
+                    var orFilters = new List<FilterDefinition<T>>();
+                    foreach (var property in properties) orFilters.Add(builder.Regex(property, searchRegex));
+                    filter &= builder.Or(orFilters);
+                }
+            }
+            else
+            {
+                var orFilters = new List<FilterDefinition<T>>();
+                var properties = typeof(T).GetProperties().Where(p => p.PropertyType == typeof(string) || p.PropertyType == typeof(object));
+                foreach (var property in properties) orFilters.Add(builder.Regex(property.Name, searchRegex));
+                filter &= builder.Or(orFilters);
+            }
+        }
         if (queryOptions.Filters != null)
         {
             foreach (var entry in queryOptions.Filters)

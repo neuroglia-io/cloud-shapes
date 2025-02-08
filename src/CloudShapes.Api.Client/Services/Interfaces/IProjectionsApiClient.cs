@@ -24,4 +24,13 @@ public interface IProjectionsApiClient
     /// <returns>A new <see cref="PagedResult{T}"/> that wraps filtered projections</returns>
     Task<PagedResult<IDictionary<string, object>>> ListAsync(string type, QueryOptions? queryOptions = null, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Deletes the specified projection
+    /// </summary>
+    /// <param name="type">The type of projection to delete</param>
+    /// <param name="id">The id of the projection to delete</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>A new awaitable <see cref="Task"/></returns>
+    Task DeleteAsync(string type, string id, CancellationToken cancellationToken = default);
+
 }

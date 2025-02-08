@@ -13,6 +13,6 @@ public interface ISchemaValidator
     /// <param name="schema">The <see cref="JSchema"/> to validate the input against</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="IOperationResult"/> that describes the result of the operation</returns>
-    Task<IOperationResult> ValidateAsync(object input, JSchema schema, CancellationToken cancellationToken = default);
+    Task<IOperationResult> ValidateAsync(object input, JsonSchema schema, CancellationToken cancellationToken = default);
 
 }

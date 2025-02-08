@@ -3,6 +3,8 @@
 @page "/projections"
 @page "/{projectionTypeName?}"
 @inherits StatefulComponent<ProjectionListStore, ProjectionListState>
+@inject JSInterop JSInterop
+@inject IPluralize Pluralize
 
 <PageTitle>Cloud Streams - @(string.IsNullOrWhiteSpace(ProjectionTypeName) ? "Projections" : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(ProjectionTypeName))</PageTitle>
 
@@ -13,57 +15,89 @@
 else
 {
     <div class="d-flex">
-        <Sidebar Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
-        <div class="table-container">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th class="sticky-header">Id</th>
-                        <th class="sticky-header text-center">Created At</th>
-                        <th class="sticky-header text-center">Last Modified</th>
-                        <th class="sticky-header text-center">Version</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <Virtualize @ref="virtualize" Context="projection" ItemsProvider="@Store.ProvideProjectionsAsync" ItemSize="61">
-                        <ItemContent>
-                            <tr @onclick="async _ => await OnShowProjectionOffcanvasAsync(projection)" class="cursor-pointer">
-                                <td>@projection["_id"]</td>
-                                <td class="text-center">@(((DateTimeOffset)projection.Find("_metadata.createdAt")!).AsMoment())</td>
-                                <td class="text-center">@(((DateTimeOffset)projection.Find("_metadata.lastModified")!).AsMoment())</td>
-                                <td class="text-center">@projection.Find("_metadata.version")</td>
-                                <td class="text-end">
-                                    <button class="btn btn-outline-primary btn-sm" title="Edit the projection" @onclick:preventDefault @onclick:stopPropagation><Icon Name="IconName.Pencil" /></button>
-                                    <button class="btn btn-sm btn-outline-danger" title="Delete the projection" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
-                                </td>
-                            </tr>
-                        </ItemContent>
-                        <Placeholder>
-                            <tr class="row-placeholder">
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </Placeholder>
-                    </Virtualize>
-                </tbody>
-            </table>
+        <Sidebar @ref="sidebar" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+        <div class="w-100 p-3">
+            <div class="d-flex">
+                <input type="search" class="form-control rounded my-2 me-2" placeholder="Search" value="@queryOptions?.Search" @oninput="e => Store.SetSearchTerm(e.Value?.ToString())" />
+                <div class="dropdown d-flex align-content-center">
+                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item @(selectedProjections.Count == 0 ? "text-mute" : "text-danger")" href="#" @onclick="async _ => await (selectedProjections.Count == 0 ?  Task.CompletedTask : OnDeleteSelectedProjectionsAsync())" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete selected</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th class="sticky-header">Id</th>
+                            <th class="sticky-header text-center">Created At</th>
+                            <th class="sticky-header text-center">Last Modified</th>
+                            <th class="sticky-header text-center">Version</th>
+                            <th class="sticky-header text-end"></th>
+                            <th class="sticky-header text-center">
+                                <input @ref="selectAllCheckbox" type="checkbox" @onclick="(_) => Store.ToggleProjectionSelection()" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <Virtualize @ref="virtualize" Context="projection" ItemsProvider="@Store.ProvideProjectionsAsync" ItemSize="61">
+                            <ItemContent>
+                                @{
+                                    var projectionId = (string)projection["_id"];
+                                }
+                                <tr @onclick="async _ => await OnShowProjectionOffcanvasAsync(projection)" class="cursor-pointer">
+                                    <td>@projectionId</td>
+                                    <td class="text-center">@DateTimeOffset.Parse((string)projection.Find("_metadata.createdAt")!).AsMoment()</td>
+                                    <td class="text-center">@DateTimeOffset.Parse((string)projection.Find("_metadata.lastModified")!).AsMoment()</td>
+                                    <td class="text-center">@projection.Find("_metadata.version")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                            <li><a class="dropdown-item text-danger" href="#" @onclick="async _ => await OnDeleteProjectionAsync(projectionId)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete</a></li>
+                                        </ul>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <input type="checkbox" checked="@selectedProjections.Contains(projectionId)" @onclick="(_) => Store.ToggleProjectionSelection(projectionId)" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
+                                    </td>
+                                </tr>
+                            </ItemContent>
+                            <Placeholder>
+                                <tr class="row-placeholder">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </Placeholder>
+                        </Virtualize>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     </div>
 }
 
-<Offcanvas @ref="offcanvas" Size="OffcanvasSize.Large" ReadOnly="true" UseStaticBackdrop="false" />
+<Offcanvas @ref="offcanvas" Size="OffcanvasSize.Large" UseStaticBackdrop="false" />
+<ConfirmDialog @ref="dialog" />
 
 @code {
 
+    Sidebar? sidebar;
     Offcanvas? offcanvas;
+    ConfirmDialog? dialog;
     Virtualize<IDictionary<string, object>>? virtualize;
     bool loading = true;
     string? projectionTypeName;
     ProjectionType? projectionType;
+    ElementReference? selectAllCheckbox;
+    IEnumerable<IDictionary<string, object>>? projections;
+    EquatableList<string> selectedProjections = [];
+    QueryOptions? queryOptions;
 
     [Parameter] public string? ProjectionTypeName { get; set; }
 
@@ -72,12 +106,35 @@ else
         await base.OnInitializedAsync();
         Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), token: CancellationTokenSource.Token);
         Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), token: CancellationTokenSource.Token);
-        Store.Projections.SubscribeAsync(async _ => 
+        Store.ProjectionTypes.SubscribeAsync(async _ =>
+        {
+            if (sidebar == null) return;
+            await sidebar.RefreshDataAsync();
+            OnStateChanged(_ => { });
+        }, CancellationTokenSource.Token);
+        Store.Projections.SubscribeAsync(async projections =>
         {
             if (virtualize == null) return;
             await virtualize.RefreshDataAsync();
-            OnStateChanged(_ => { });
+            OnStateChanged(_ => 
+            {
+                this.projections = projections?.Items;
+            });
         }, CancellationTokenSource.Token);
+        Store.SelectedProjections.SubscribeAsync(async selectedProjections =>
+        {
+            OnStateChanged(_ =>
+            {
+                this.selectedProjections = selectedProjections;
+            });
+            if (selectAllCheckbox.HasValue)
+            {
+                if (selectedProjections.Count == 0) await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Unchecked);
+                else if (selectedProjections.Count == (projections?.Count() ?? 0)) await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Checked);
+                else await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Indeterminate);
+            }
+        }, CancellationTokenSource.Token);
+        Store.QueryOptions.Subscribe(value => OnStateChanged(_ => queryOptions = value), token: CancellationTokenSource.Token);
         if(!string.IsNullOrWhiteSpace(ProjectionTypeName)) Store.SetProjectionTypeName(ProjectionTypeName);
     }
 
@@ -89,6 +146,49 @@ else
             if(!string.IsNullOrWhiteSpace(projectionTypeName)) Store.SetProjectionTypeName(projectionTypeName);
         }
         base.OnParametersSet();
+    }
+
+    protected async Task OnDeleteProjectionAsync(string projectionId)
+    {
+        if (dialog == null) return;
+        var type = projectionType!.Name.SplitCamelCase();
+        type = string.Join(' ', type.Split(' ').Select(c => c.ToLowerInvariant()));
+        var confirmation = await dialog.ShowAsync(
+            $"Are you sure you want to delete the {type} with id '{projectionId}'?",
+            $"The {type} will be permanently deleted. Are you sure you want to proceed ?",
+            new ConfirmDialogOptions()
+            {
+                YesButtonColor = ButtonColor.Danger,
+                YesButtonText = "Delete",
+                NoButtonText = "Abort",
+                IsVerticallyCentered = true
+            }
+        );
+        if (!confirmation) return;
+        await this.Store.DeleteProjectionAsync(projectionId);
+    }
+
+    protected async Task OnDeleteSelectedProjectionsAsync()
+    {
+        if (dialog == null) return;
+        if (selectedProjections.Count == 0) return;
+        var type = projectionType!.Name.SplitCamelCase();
+        var typeComponents = type.Split(' ').Select(c => c.ToLowerInvariant()).ToArray();
+        if (selectedProjections.Count > 1) typeComponents[typeComponents.Length - 1] = Pluralize.Pluralize(typeComponents[typeComponents.Length - 1]);
+        type = string.Join(' ', typeComponents);
+        var confirmation = await dialog.ShowAsync(
+            $"Are you sure you want to delete {selectedProjections.Count} {type}?",
+            $"The {type} will be permanently deleted. Are you sure you want to proceed ?",
+            new ConfirmDialogOptions()
+            {
+                YesButtonColor = ButtonColor.Danger,
+                YesButtonText = "Delete",
+                NoButtonText = "Abort",
+                IsVerticallyCentered = true
+            }
+        );
+        if (!confirmation) return;
+        await Store.DeleteSelectedProjectionsAsync();
     }
 
     Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)

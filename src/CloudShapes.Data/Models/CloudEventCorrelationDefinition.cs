@@ -31,6 +31,7 @@ public record CloudEventCorrelationDefinition
     /// <summary>
     /// Gets the strategy used to extract the value from the CloudEvent
     /// </summary>
+    [JsonIgnore]
     public virtual string Strategy => string.IsNullOrWhiteSpace(this.Attribute) ? string.IsNullOrWhiteSpace(this.Expression) ? throw new Exception("Either 'attribute' or 'expression' must be defined") : CloudEventValueResolutionStrategy.Expression : CloudEventValueResolutionStrategy.Attribute;
 
     /// <summary>

@@ -32,12 +32,22 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
     /// <inheritdoc/>
     public virtual async Task<PagedResult<IDictionary<string, object>>> ListAsync(string type, QueryOptions? queryOptions = null, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
         var path = $"{PathPrefix}/{Pluralize.Pluralize(type).ToCamelCase()}";
         if (queryOptions != null) path += "?" + queryOptions.ToQueryString();
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return JsonSerializer.Deserialize<PagedResult<IDictionary<string, object>>>(json)!;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task DeleteAsync(string type, string id, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"{PathPrefix}/{Pluralize.Pluralize(type).ToCamelCase()}/{id}");
+        await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
     }
 
 }
