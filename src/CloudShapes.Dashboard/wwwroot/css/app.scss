@@ -139,3 +139,7 @@ nav:has(> div.markdown-input) {
 textarea.resize-none {
     resize: none;
 }
+
+td.fit, th.fit {
+    width: 1%;
+}

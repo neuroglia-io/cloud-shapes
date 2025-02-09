@@ -26,7 +26,7 @@ else
                     <th class="sticky-header text-center">Delete Triggers</th>
                     <th class="sticky-header text-center">Relationships</th>
                     <th class="sticky-header text-center">Projections</th>
-                    <th></th>
+                    <th class="fit"></th>
                 </tr>
             </thead>
             <tbody>
@@ -107,7 +107,7 @@ else
                                 }
                             </td>
                             <td class="text-center">@projectionType.Metadata.ProjectionCount</td>
-                            <td class="text-end">
+                            <td class="text-end fit">
                                 <button class="btn btn-outline-primary btn-sm" title="Edit the projection" @onclick:preventDefault @onclick:stopPropagation><Icon Name="IconName.Pencil" /></button>
                                 <button class="btn btn-sm btn-outline-danger" title="Delete the projection" @onclick="async _ => await Store.DeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
                             </td>

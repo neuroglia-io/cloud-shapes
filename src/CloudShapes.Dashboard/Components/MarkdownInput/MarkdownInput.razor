@@ -4,7 +4,7 @@
     <Tabs NavStyle="NavStyle.Underline" Class="markdown-input">
         <Tab Title="Edit" Active="true">
             <Content>
-                <textarea class="w-100 @heightClass p-3 bg-dark-subtle border-0 resize-none" @oninput="e => OnInputAsync((string?)e.Value)"></textarea>
+                <textarea class="w-100 @heightClass overflow-scroll p-3 bg-dark-subtle border-0 resize-none" @oninput="e => OnInputAsync((string?)e.Value)"></textarea>
             </Content>
         </Tab>
         <Tab Title="Preview">
@@ -18,7 +18,7 @@
 @code {
     MarkdownInputSize height = MarkdownInputSize.Normal;
     string heightClass = "h-200-px";
-    string markdownClass = $"w-100 h-200-px p-3 bg-dark-subtle border-0";
+    string markdownClass = $"w-100 h-200-px overflow-scroll p-3 bg-dark-subtle border-0";
     string? value;
 
     [Parameter] public MarkdownInputSize Size { get; set; } = MarkdownInputSize.Normal;
@@ -39,7 +39,7 @@
                 MarkdownInputSize.Normal => "h-200-px",
                 _ => "h-300-px"
             };
-            markdownClass = $"w-100 {heightClass} p-3 bg-dark-subtle border-0";
+            markdownClass = $"w-100 {heightClass} overflow-scroll p-3 bg-dark-subtle border-0";
         }
         if (value != Value) value = Value;
     }

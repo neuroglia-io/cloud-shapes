@@ -35,7 +35,7 @@ else
                             <th class="sticky-header text-center">Last Modified</th>
                             <th class="sticky-header text-center">Version</th>
                             <th class="sticky-header text-end"></th>
-                            <th class="sticky-header text-center">
+                            <th class="sticky-header text-center fit">
                                 <input @ref="selectAllCheckbox" type="checkbox" @onclick="(_) => Store.ToggleProjectionSelection()" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
                             </th>
                         </tr>
@@ -58,7 +58,7 @@ else
                                             <li><a class="dropdown-item text-danger" href="#" @onclick="async _ => await OnDeleteProjectionAsync(projectionId)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete</a></li>
                                         </ul>
                                     </td>
-                                    <td class="text-center align-middle">
+                                    <td class="text-center align-middle fit">
                                         <input type="checkbox" checked="@selectedProjections.Contains(projectionId)" @onclick="(_) => Store.ToggleProjectionSelection(projectionId)" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
                                     </td>
                                 </tr>

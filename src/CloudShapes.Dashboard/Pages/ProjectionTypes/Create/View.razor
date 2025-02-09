@@ -1,5 +1,6 @@
 ﻿@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create
 @page "/projections/types/new"
+@inherits StatefulComponent<CreateProjectionTypeStore, CreateProjectionTypeState>
 
 <ApplicationTitle>New Projection Type</ApplicationTitle>
 
@@ -8,34 +9,34 @@
     <h4 class="mb-4">New Projection Type</h4>
 
     <div class="card mb-3">
-        <div class="card-header" role="button" @onclick="ToggleInformationCollapsibleAsync">
-            <h6>Information</h6>
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
+            <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
         </div>
         <Collapse @ref="informationCollapsible" Toggle="true">
             <div class="card-body">
                 <div class="mb-3">
                     <label for="name" class="form-label">Name</label>
-                    <input name="name" type="text" class="form-control" placeholder="Name" value="@projectionType.Name" @oninput="e => OnNameChanged((string?)e.Value)">
+                    <input name="name" type="text" class="form-control" placeholder="Name" value="@projectionType.Name" @oninput="e => Store.SetProjectionTypeName((string?)e.Value)">
                 </div>
                 <div class="mb-3">
                     <label for="summary" class="form-label">Summary</label>
-                    <MarkdownInput Value="@projectionType.Summary" Size="MarkdownInputSize.Small" OnInput="e => OnSummaryChanged((string?)e.Value)" />
+                    <MarkdownInput Value="@projectionType.Summary" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
                 </div>
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <MarkdownInput Value="@projectionType.Description" Size="MarkdownInputSize.Normal" OnInput="e => OnDescriptionChanged((string?)e.Value)" />
+                    <MarkdownInput Value="@projectionType.Description" Size="MarkdownInputSize.Normal" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
                 </div>
                 <div>
                     <div class="d-flex justify-content-between align-items-center">
                         <label for="tags" class="form-label">Tags</label>
-                        <button type="button" class="btn btn-sm btn-primary @(showNewTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
+                        <button type="button" class="btn btn-sm btn-primary @(showTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
                     </div>
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Value</th>
-                                <th></th>
+                                <th class="fit"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -46,16 +47,16 @@
                                     <tr>
                                         <td>@tag.Key</td>
                                         <td>@tag.Value</td>
-                                        <td class="text-end">
+                                        <td class="text-end fit">
                                             <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
                                         </td>
                                     </tr>
                                 }
                             }
-                            <tr class="@(showNewTagEditor == true ? "" : "d-none")">
-                                <td><input type="text" class="form-control" placeholder="Key" value="@newTagKey" @oninput="e => OnNewTagKeyChanged((string?)e.Value)" /></td>
-                                <td><input type="text" class="form-control" placeholder="Value" value="@newTagValue" @oninput="e => OnNewTagValueChanged((string?)e.Value)" /></td>
-                                <td class="text-end"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
+                            <tr class="@(showTagEditor == true ? "" : "d-none")">
+                                <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" value="@tagKey" @oninput="e => OnNewTagKeyChanged((string?)e.Value)" /></td>
+                                <td class="p-0"><input type="text" class="form-control" placeholder="Value" value="@tagValue" @oninput="e => OnNewTagValueChanged((string?)e.Value)" /></td>
+                                <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -65,8 +66,8 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header" role="button" @onclick="ToggleSchemaCollapsibleAsync">
-            <h6>Schema</h6>
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleSchemaCollapsibleAsync">
+            <Icon Name="IconName.FileTypeJson" Class="me-2" /><h6 class="mb-0">Schema</h6>
         </div>
         <Collapse @ref="schemaCollapsible">
             <div class="card-body">
@@ -78,40 +79,129 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header" role="button" @onclick="ToggleTriggersCollapsibleAsync">
-            <h6>Triggers</h6>
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
+            <Icon Name="IconName.LightningChargeFill" Class="me-2" /><h6 class="mb-0">Triggers</h6>
         </div>
         <Collapse @ref="triggersCollapsible">
             <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Event</th>
-                        </tr>
-                    </thead>
-                    <tbody>
 
-                    </tbody>
-                </table>
+                <div class="card mb-3">
+                    <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <div class="d-flex align-items-baseline">
+                                <Icon Name="IconName.PlusCircle" Class="me-2" /><label for="tags" class="form-label">Create Triggers</label>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                        </div>
+                    </div>
+                    <Collapse @ref="createTriggersCollapsible" Toggle="true">
+                        <div class="card-body">
+                            <table class="table table-hover mt-n3">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th class="text-center">Source</th>
+                                        <th class="text-center">Correlation</th>
+                                        <th class="text-end fit"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var trigger in projectionType.Triggers.Create)
+                                    {
+                                        <tr>
+                                            <td><code>@trigger.Event.Type</code></td>
+                                            <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                            <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                            <td class="text-end fit">
+                                                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveCreateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </Collapse>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header" role="button" @onclick="OnToggleUpdateTriggersCollapsibleAsync">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <div class="d-flex align-items-baseline">
+                                <Icon Name="IconName.ArrowClockwise" Class="me-2" /><label for="tags" class="form-label">Update Triggers</label>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                        </div>
+                    </div>
+                    <Collapse @ref="updateTriggersCollapsible">
+                        <div class="card-body">
+                            <table class="table table-hover mt-n3">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th class="text-center">Source</th>
+                                        <th class="text-center">Correlation</th>
+                                        <th class="text-end fit"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </Collapse>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header" role="button" @onclick="OnToggleDeleteTriggersCollapsibleAsync">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <div class="d-flex align-items-baseline">
+                                <Icon Name="IconName.XCircle" Class="me-2" /><label for="tags" class="form-label">Delete Triggers</label>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                        </div>
+                    </div>
+                    <Collapse @ref="deleteTriggersCollapsible">
+                        <div class="card-body">
+                            <table class="table table-hover mt-n3">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th class="text-center">Source</th>
+                                        <th class="text-center">Correlation</th>
+                                        <th class="text-end fit"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </Collapse>
+                </div>
+
             </div>
         </Collapse>
     </div>
 
     <div class="card mb-3">
-        <div class="card-header" role="button" @onclick="ToggleRelationshipsCollapsibleAsync">
-            <h6>Relationships</h6>
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleRelationshipsCollapsibleAsync">
+            <Icon Name="IconName.Link" Class="me-2" /><h6 class="mb-0">Relationships</h6>
         </div>
         <Collapse @ref="relationshipsCollapsible">
             <div class="card-body">
                 <table class="table table-hover">
+
                 </table>
             </div>
         </Collapse>
     </div>
 
     <div class="card mb-3">
-        <div class="card-header" role="button" @onclick="ToggleIndexesCollapsibleAsync">
-            <h6>Indexes</h6>
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleIndexesCollapsibleAsync">
+            <Icon Name="IconName.ListOl" Class="me-2" /><h6 class="mb-0">Indexes</h6>
         </div>
         <Collapse @ref="indexesCollapsible">
             <div class="card-body">
@@ -124,93 +214,144 @@
 
 </div>
 
+<Modal @ref="triggerEditorModal" Size="ModalSize.Large" IsVerticallyCentered="true" />
+
 @code{
     Collapse? informationCollapsible;
     Collapse? schemaCollapsible;
     MonacoEditor? schemaInput;
     Collapse? triggersCollapsible;
+    Collapse? createTriggersCollapsible;
+    Collapse? updateTriggersCollapsible;
+    Collapse? deleteTriggersCollapsible;
     Collapse? relationshipsCollapsible;
     Collapse? indexesCollapsible;
+    Modal? triggerEditorModal;
     ProjectionType projectionType = new();
-    bool showNewTagEditor;
-    string? newTagKey;
-    string? newTagValue;
+    bool showTagEditor;
+    string? tagKey;
+    string? tagValue;
 
-    async Task ToggleInformationCollapsibleAsync()
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.ProjectionType.Subscribe(value =>
+        {
+            OnStateChanged(_ =>
+            {
+                projectionType = value;
+            });
+        });
+    }
+
+    async Task OnToggleInformationCollapsibleAsync()
     {
         if (informationCollapsible == null) return;
         await informationCollapsible.ToggleAsync();
     }
 
-    async Task ToggleSchemaCollapsibleAsync()
+    async Task OnToggleSchemaCollapsibleAsync()
     {
         if (schemaCollapsible == null) return;
         await schemaCollapsible.ToggleAsync();
     }
 
-    async Task ToggleTriggersCollapsibleAsync()
+    async Task OnToggleTriggersCollapsibleAsync()
     {
         if (triggersCollapsible == null) return;
         await triggersCollapsible.ToggleAsync();
     }
 
-    async Task ToggleRelationshipsCollapsibleAsync()
+    async Task OnToggleCreateTriggersCollapsibleAsync()
+    {
+        if (createTriggersCollapsible == null) return;
+        await createTriggersCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleUpdateTriggersCollapsibleAsync()
+    {
+        if (updateTriggersCollapsible == null) return;
+        await updateTriggersCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleDeleteTriggersCollapsibleAsync()
+    {
+        if (deleteTriggersCollapsible == null) return;
+        await deleteTriggersCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleRelationshipsCollapsibleAsync()
     {
         if (relationshipsCollapsible == null) return;
         await relationshipsCollapsible.ToggleAsync();
     }
 
-    async Task ToggleIndexesCollapsibleAsync()
+    async Task OnToggleIndexesCollapsibleAsync()
     {
         if (indexesCollapsible == null) return;
         await indexesCollapsible.ToggleAsync();
     }
 
-    void OnNameChanged(string? name)
-    {
-        projectionType.Name = name!;
-    }
-
-    void OnSummaryChanged(string? summary)
-    {
-        projectionType.Summary = summary;
-    }
-
-    void OnDescriptionChanged(string? description)
-    {
-        projectionType.Description = description;
-    }
-
     void OnAddTag()
     {
-        showNewTagEditor = true;
+        OnStateChanged(_ =>
+        {
+            showTagEditor = true;
+        });
     }
 
     void OnNewTagKeyChanged(string? key)
     {
-        newTagKey = key;
+        tagKey = key;
     }
 
     void OnNewTagValueChanged(string? value)
     {
-        newTagValue = value;
+        tagValue = value;
     }
 
     void OnConfirmAddTag()
     {
-        if (string.IsNullOrWhiteSpace(newTagKey)) return;
-        projectionType.Tags ??= [];
-        projectionType.Tags[newTagKey] = newTagValue!;
-        newTagKey = null;
-        newTagValue = null;
-        showNewTagEditor = false;
+        if (string.IsNullOrWhiteSpace(tagKey)) return;
+        Store.AddTagToProjectionType(tagKey, tagValue!);
+        OnStateChanged(_ =>
+        {
+            tagKey = null;
+            tagValue = null;
+            showTagEditor = false;
+        });
     }
 
     void OnRemoveTag(string key)
     {
         if (projectionType.Tags == null) return;
-        projectionType.Tags.Remove(key);
+        Store.RemoveTagFromProjectionType(key);
         if (projectionType.Tags.Count < 1) projectionType.Tags = null;
     }
 
+    async Task OnAddCreateTriggerAsync()
+    {
+        if (triggerEditorModal == null) return;
+        var parameters = new Dictionary<string, object>();
+        parameters[nameof(CreateTriggerEditor.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
+        {
+            await triggerEditorModal.HideAsync();
+        });
+        parameters[nameof(CreateTriggerEditor.OnCreate)] = EventCallback.Factory.Create<CloudEventCreateTriggerDefinition>(this, async trigger =>
+        {
+            Store.AddTrigger(trigger);
+            await triggerEditorModal.HideAsync();
+        });
+        await triggerEditorModal.ShowAsync<CreateTriggerEditor>("New create trigger", null, parameters);
+    }
+
+    async Task OnAddUpdateTriggerAsync()
+    {
+        
+    }
+
+    async Task OnAddDeleteTriggerAsync()
+    {
+        
+    }
 }
