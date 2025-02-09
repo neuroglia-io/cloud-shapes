@@ -1,0 +1,216 @@
+﻿@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create
+@page "/projections/types/new"
+
+<ApplicationTitle>New Projection Type</ApplicationTitle>
+
+<div class="p-3">
+
+    <h4 class="mb-4">New Projection Type</h4>
+
+    <div class="card mb-3">
+        <div class="card-header" role="button" @onclick="ToggleInformationCollapsibleAsync">
+            <h6>Information</h6>
+        </div>
+        <Collapse @ref="informationCollapsible" Toggle="true">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <input name="name" type="text" class="form-control" placeholder="Name" value="@projectionType.Name" @oninput="e => OnNameChanged((string?)e.Value)">
+                </div>
+                <div class="mb-3">
+                    <label for="summary" class="form-label">Summary</label>
+                    <MarkdownInput Value="@projectionType.Summary" Size="MarkdownInputSize.Small" OnInput="e => OnSummaryChanged((string?)e.Value)" />
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <MarkdownInput Value="@projectionType.Description" Size="MarkdownInputSize.Normal" OnInput="e => OnDescriptionChanged((string?)e.Value)" />
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="tags" class="form-label">Tags</label>
+                        <button type="button" class="btn btn-sm btn-primary @(showNewTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Value</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (projectionType.Tags != null)
+                            {
+                                foreach (var tag in projectionType.Tags)
+                                {
+                                    <tr>
+                                        <td>@tag.Key</td>
+                                        <td>@tag.Value</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            <tr class="@(showNewTagEditor == true ? "" : "d-none")">
+                                <td><input type="text" class="form-control" placeholder="Key" value="@newTagKey" @oninput="e => OnNewTagKeyChanged((string?)e.Value)" /></td>
+                                <td><input type="text" class="form-control" placeholder="Value" value="@newTagValue" @oninput="e => OnNewTagValueChanged((string?)e.Value)" /></td>
+                                <td class="text-end"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </Collapse>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header" role="button" @onclick="ToggleSchemaCollapsibleAsync">
+            <h6>Schema</h6>
+        </div>
+        <Collapse @ref="schemaCollapsible">
+            <div class="card-body">
+                <div>
+                    <MonacoEditor @ref="schemaInput" />
+                </div>
+            </div>
+        </Collapse>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header" role="button" @onclick="ToggleTriggersCollapsibleAsync">
+            <h6>Triggers</h6>
+        </div>
+        <Collapse @ref="triggersCollapsible">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+        </Collapse>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header" role="button" @onclick="ToggleRelationshipsCollapsibleAsync">
+            <h6>Relationships</h6>
+        </div>
+        <Collapse @ref="relationshipsCollapsible">
+            <div class="card-body">
+                <table class="table table-hover">
+                </table>
+            </div>
+        </Collapse>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header" role="button" @onclick="ToggleIndexesCollapsibleAsync">
+            <h6>Indexes</h6>
+        </div>
+        <Collapse @ref="indexesCollapsible">
+            <div class="card-body">
+                <table class="table table-hover">
+
+                </table>
+            </div>
+        </Collapse>
+    </div>
+
+</div>
+
+@code{
+    Collapse? informationCollapsible;
+    Collapse? schemaCollapsible;
+    MonacoEditor? schemaInput;
+    Collapse? triggersCollapsible;
+    Collapse? relationshipsCollapsible;
+    Collapse? indexesCollapsible;
+    ProjectionType projectionType = new();
+    bool showNewTagEditor;
+    string? newTagKey;
+    string? newTagValue;
+
+    async Task ToggleInformationCollapsibleAsync()
+    {
+        if (informationCollapsible == null) return;
+        await informationCollapsible.ToggleAsync();
+    }
+
+    async Task ToggleSchemaCollapsibleAsync()
+    {
+        if (schemaCollapsible == null) return;
+        await schemaCollapsible.ToggleAsync();
+    }
+
+    async Task ToggleTriggersCollapsibleAsync()
+    {
+        if (triggersCollapsible == null) return;
+        await triggersCollapsible.ToggleAsync();
+    }
+
+    async Task ToggleRelationshipsCollapsibleAsync()
+    {
+        if (relationshipsCollapsible == null) return;
+        await relationshipsCollapsible.ToggleAsync();
+    }
+
+    async Task ToggleIndexesCollapsibleAsync()
+    {
+        if (indexesCollapsible == null) return;
+        await indexesCollapsible.ToggleAsync();
+    }
+
+    void OnNameChanged(string? name)
+    {
+        projectionType.Name = name!;
+    }
+
+    void OnSummaryChanged(string? summary)
+    {
+        projectionType.Summary = summary;
+    }
+
+    void OnDescriptionChanged(string? description)
+    {
+        projectionType.Description = description;
+    }
+
+    void OnAddTag()
+    {
+        showNewTagEditor = true;
+    }
+
+    void OnNewTagKeyChanged(string? key)
+    {
+        newTagKey = key;
+    }
+
+    void OnNewTagValueChanged(string? value)
+    {
+        newTagValue = value;
+    }
+
+    void OnConfirmAddTag()
+    {
+        if (string.IsNullOrWhiteSpace(newTagKey)) return;
+        projectionType.Tags ??= [];
+        projectionType.Tags[newTagKey] = newTagValue!;
+        newTagKey = null;
+        newTagValue = null;
+        showNewTagEditor = false;
+    }
+
+    void OnRemoveTag(string key)
+    {
+        if (projectionType.Tags == null) return;
+        projectionType.Tags.Remove(key);
+        if (projectionType.Tags.Count < 1) projectionType.Tags = null;
+    }
+
+}
