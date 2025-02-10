@@ -1,0 +1,165 @@
+﻿@namespace CloudShapes.Dashboard.Components
+@inject IMonacoEditorHelper MonacoEditorHelper
+@inject IJsonSerializer JsonSerializer
+@inject IYamlSerializer YamlSerializer
+
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleEventFilterAsync">
+        <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+        <h6>Event</h6>
+    </div>
+    <Collapse @ref="eventFilterCollapsible" Toggle="true">
+        <div class="card-body">
+            <CloudEventFilterEditor EventFilter="trigger.Event" OnChange="OnEventFilterChangedAsync" />
+        </div>
+    </Collapse>
+</div>
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleStateAsync">
+        <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+        <h6>Update</h6>
+    </div>
+    <Collapse @ref="stateCollapsible" Toggle="true">
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Strategy</label>
+                <div class="form-check form-check-inline">
+                    <RadioInput Name="updateStrategy" Label="Replace" @bind-Value="replaceUpdateStrategy" />
+                </div>
+                <div class="form-check form-check-inline">
+                    <RadioInput Name="updateStrategy" Label="Patch" @bind-Value="patchUpdateStrategy" />
+                </div>
+            </div>
+            @if (patchUpdateStrategy)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Patch Type</label>
+                    <select name="patch.type" class="form-select" @onchange="e => patchType = (string)e.Value!">
+                        <option value="json">Json Patch</option>
+                        <option value="merge">Json Merge Patch</option>
+                        <option value="strategic">Json Strategic Merge Patch</option>
+                    </select>
+                </div>
+            }
+            <MonacoEditor @ref="editor" OnTextChanged="OnEditorInputChangedAsync" />
+        </div>
+    </Collapse>
+</div>
+@if(validationErrors.Count > 0)
+{
+    <div class="alert alert-danger mb-3">
+        <ul>
+            @foreach (var error in validationErrors)
+            {
+                <li>@((MarkupString)error)</li>
+            }
+        </ul>
+    </div>
+}
+<div class="d-flex justify-content-between">
+    <Button Color="ButtonColor.Secondary" Type="ButtonType.Button" Class="w-100 me-1" @onclick="OnCancel">Cancel</Button>
+    <Button Color="ButtonColor.Primary" Type="ButtonType.Button" Class="w-100 ms-1" @onclick="OnCreateAsync">Create</Button>
+</div>
+
+@code {
+    Collapse? eventFilterCollapsible;
+    Collapse? stateCollapsible;
+    MonacoEditor? editor;
+    CloudEventUpdateTriggerDefinition trigger = new();
+    bool replaceUpdateStrategy = true;
+    bool patchUpdateStrategy;
+    string patchType = PatchType.JsonPatch;
+    string? rawState;
+    string invalidJsonPatchError = "Input is not a valid JSON Patch";
+    List<string> validationErrors = [];
+
+    [Parameter] public CloudEventUpdateTriggerDefinition Trigger { get; set; } = new();
+
+    [Parameter] public EventCallback<CloudEventUpdateTriggerDefinition> OnChange { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public EventCallback<CloudEventUpdateTriggerDefinition> OnCreate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (trigger != Trigger) trigger = Trigger;
+    }
+
+    async Task OnToggleEventFilterAsync()
+    {
+        if (eventFilterCollapsible == null) return;
+        await eventFilterCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleStateAsync()
+    {
+        if (stateCollapsible == null) return;
+        await stateCollapsible.ToggleAsync();
+    }
+
+    async Task OnEventFilterChangedAsync(CloudEventFilterDefinition eventFilter)
+    {
+        trigger.Event = eventFilter;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(trigger);
+    }
+
+    async Task OnEditorInputChangedAsync(string raw)
+    {
+        rawState = raw;
+        try
+        {
+            var serializer = MonacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)JsonSerializer : YamlSerializer;
+            if (replaceUpdateStrategy)
+            {
+                var state = string.IsNullOrWhiteSpace(rawState)
+                    ? new { }
+                    : serializer.Deserialize<object>(rawState)!;
+                trigger.State = state;
+            }
+            else
+            {
+                switch (patchType)
+                {
+                    case PatchType.JsonPatch:
+                        try
+                        {
+                            var patchOperations = string.IsNullOrWhiteSpace(rawState)
+                            ? []
+                            : serializer.Deserialize<JsonPatchOperation[]>(rawState)!;
+                            trigger.Patch = new Patch(patchType, patchOperations);
+                            if (validationErrors.Contains(invalidJsonPatchError)) validationErrors.Remove(invalidJsonPatchError);
+                        }
+                        catch { if (!validationErrors.Contains(invalidJsonPatchError)) validationErrors.Add(invalidJsonPatchError); }
+                        break;
+                    case PatchType.JsonMergePatch:
+                    case PatchType.JsonStrategicMergePatch:
+                        var patchDocument = string.IsNullOrWhiteSpace(rawState)
+                            ? new { }
+                            : serializer.Deserialize<object>(rawState)!;
+                        trigger.Patch = new Patch(patchType, patchDocument);
+                        break;
+                }
+            }
+            if (OnChange.HasDelegate) await OnChange.InvokeAsync(trigger);
+        }
+        catch { }
+    }
+
+    async Task OnCreateAsync()
+    {
+        var invalidPatch = false;
+        if (validationErrors.Contains(invalidJsonPatchError)) invalidPatch = true;
+        validationErrors.Clear();
+        if (invalidPatch) validationErrors.Add(invalidJsonPatchError);
+        if (string.IsNullOrWhiteSpace(trigger.Event.Type)) validationErrors.Add("<b>Event.Type</b> must be set");
+        if (!string.IsNullOrWhiteSpace(trigger.Event.Source) && !Uri.TryCreate(trigger.Event.Source, UriKind.Absolute, out _)) validationErrors.Add("<b>Event.Source</b> must be an absolute uri");
+        if (string.IsNullOrWhiteSpace(trigger.Event.Correlation.Attribute) && string.IsNullOrWhiteSpace(trigger.Event.Correlation.Expression)) validationErrors.Add("Either <b>Event.Correlation.attribute</b> or <b>Event.Correlation.Expression</b> must be set");
+        if (trigger.State == null && trigger.Patch == null) validationErrors.Add("Either <b>State</b> or <b>Patch</b> must be set");
+        if (validationErrors.Count > 0) return;
+        if (OnCreate.HasDelegate) await OnCreate.InvokeAsync(trigger);
+        editor?.Reset();
+    }
+
+}

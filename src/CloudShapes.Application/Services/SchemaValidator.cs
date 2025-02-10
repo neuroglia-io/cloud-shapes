@@ -25,7 +25,7 @@ public class SchemaValidator(IJsonSerializer jsonSerializer)
         };
         var evaluationResults = schema.Evaluate(node, evaluationOptions);
         if (evaluationResults.IsValid) return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.OK));
-        else return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.UnprocessableEntity, errors: evaluationResults.Errors?.Select(e => new Error(new("io.cloud-shapes.errors.invalid"), "Invalid", (int)HttpStatusCode.UnprocessableEntity, e.Value, new(e.Key, UriKind.Relative))).ToArray()!));
+        else return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.UnprocessableEntity, errors: evaluationResults.Details.Where(d => d.Errors != null).SelectMany(d => d.Errors!).Select(e => new Error(new("io.cloud-shapes.errors.invalid"), "Invalid", (int)HttpStatusCode.UnprocessableEntity, e.Value, new(e.Key, UriKind.Relative))).ToArray()!));
     }
 
 }

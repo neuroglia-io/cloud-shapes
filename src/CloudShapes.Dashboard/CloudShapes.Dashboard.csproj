@@ -25,4 +25,10 @@
     <ProjectReference Include="..\CloudShapes.Dashboard.StateManagement\CloudShapes.Dashboard.StateManagement.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Components\CreateUpdateEditorModal\UpdateTriggerEditorModal.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
 </Project>

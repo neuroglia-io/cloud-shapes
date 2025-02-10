@@ -1,10 +1,20 @@
-﻿namespace CloudShapes.Api.Client.Services;
+﻿using CloudShapes.Application.Commands.Projections;
+
+namespace CloudShapes.Api.Client.Services;
 
 /// <summary>
 /// Defines the fundamentals of a service used to interact with the Cloud Shapes Projections API
 /// </summary>
 public interface IProjectionsApiClient
 {
+
+    /// <summary>
+    /// Creates a new projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The newly created projection</returns>
+    Task<object> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the specified projection

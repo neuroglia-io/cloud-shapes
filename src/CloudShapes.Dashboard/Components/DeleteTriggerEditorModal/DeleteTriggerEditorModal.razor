@@ -4,22 +4,13 @@
 @inject IYamlSerializer YamlSerializer
 
 <div class="card mb-3">
-    <div class="card-header" role="button" @onclick="async _ => await OnToggleEventFilterAsync()">
+    <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleEventFilterAsync">
+        <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
         <h6>Event</h6>
     </div>
     <Collapse @ref="eventFilterCollapsible" Toggle="true">
         <div class="card-body">
             <CloudEventFilterEditor EventFilter="trigger.Event" OnChange="OnEventFilterChangedAsync" />
-        </div>
-    </Collapse>
-</div>
-<div class="card mb-3">
-    <div class="card-header" role="button" @onclick="async _ => await OnToggleStateAsync()">
-        <h6>State</h6>
-    </div>
-    <Collapse @ref="stateCollapsible" Toggle="true">
-        <div class="card-body">
-            <MonacoEditor @ref="stateEditor" OnTextChanged="async e => await OnStateChangedAsync(e)" />
         </div>
     </Collapse>
 </div>
@@ -41,19 +32,16 @@
 
 @code {
     Collapse? eventFilterCollapsible;
-    Collapse? stateCollapsible;
-    MonacoEditor? stateEditor;
-    CloudEventCreateTriggerDefinition trigger = new();
-    string? rawState;
+    CloudEventDeleteTriggerDefinition trigger = new();
     List<string> validationErrors = [];
 
-    [Parameter] public CloudEventCreateTriggerDefinition Trigger { get; set; } = new();
+    [Parameter] public CloudEventDeleteTriggerDefinition Trigger { get; set; } = new();
 
-    [Parameter] public EventCallback<CloudEventCreateTriggerDefinition> OnChange { get; set; }
+    [Parameter] public EventCallback<CloudEventDeleteTriggerDefinition> OnChange { get; set; }
 
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    [Parameter] public EventCallback<CloudEventCreateTriggerDefinition> OnCreate { get; set; }
+    [Parameter] public EventCallback<CloudEventDeleteTriggerDefinition> OnCreate { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -67,31 +55,10 @@
         await eventFilterCollapsible.ToggleAsync();
     }
 
-    async Task OnToggleStateAsync()
-    {
-        if (stateCollapsible == null) return;
-        await stateCollapsible.ToggleAsync();
-    }
-
     async Task OnEventFilterChangedAsync(CloudEventFilterDefinition eventFilter)
     {
         trigger.Event = eventFilter;
         if (OnChange.HasDelegate) await OnChange.InvokeAsync(trigger);
-    }
-
-    async Task OnStateChangedAsync(string raw)
-    {
-        rawState = raw;
-        try
-        {
-            var serializer = MonacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)JsonSerializer : YamlSerializer;
-            var state = string.IsNullOrWhiteSpace(rawState)
-                ? new { }
-                : serializer.Deserialize<object>(rawState)!;
-            trigger.State = state;
-            if (OnChange.HasDelegate) await OnChange.InvokeAsync(trigger);
-        }
-        catch { }
     }
 
     async Task OnCreateAsync()
@@ -100,7 +67,6 @@
         if (string.IsNullOrWhiteSpace(trigger.Event.Type)) validationErrors.Add("<b>Event.Type</b> must be set");
         if (!string.IsNullOrWhiteSpace(trigger.Event.Source) && !Uri.TryCreate(trigger.Event.Source, UriKind.Absolute, out _)) validationErrors.Add("<b>Event.Source</b> must be an absolute uri");
         if (string.IsNullOrWhiteSpace(trigger.Event.Correlation.Attribute) && string.IsNullOrWhiteSpace(trigger.Event.Correlation.Expression)) validationErrors.Add("Either <b>Event.Correlation.attribute</b> or <b>Event.Correlation.Expression</b> must be set");
-        if (trigger.State == null) validationErrors.Add("<b>State</b> must be set");
         if (validationErrors.Count > 0) return;
         if (OnCreate.HasDelegate) await OnCreate.InvokeAsync(trigger);
     }

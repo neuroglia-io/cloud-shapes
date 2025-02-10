@@ -12,6 +12,7 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
             <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
         </div>
         <Collapse @ref="informationCollapsible" Toggle="true">
@@ -69,9 +70,10 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleSchemaCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
             <Icon Name="IconName.FileTypeJson" Class="me-2" /><h6 class="mb-0">Schema</h6>
         </div>
-        <Collapse @ref="schemaCollapsible">
+        <Collapse @ref="schemaCollapsible" Toggle="true">
             <div class="card-body">
                 <div>
                     <MonacoEditor @ref="schemaInput" OnTextChanged="value => Store.SetSchemaContent(value)" />
@@ -82,16 +84,22 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
             <Icon Name="IconName.LightningChargeFill" Class="me-2" /><h6 class="mb-0">Triggers</h6>
         </div>
-        <Collapse @ref="triggersCollapsible">
+        <Collapse @ref="triggersCollapsible" Toggle="true">
             <div class="card-body">
 
                 <div class="card mb-3">
                     <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
                         <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline">
-                                <Icon Name="IconName.PlusCircle" Class="me-2" /><label for="tags" class="form-label">Create Triggers</label>
+                            <div class="d-flex align-items-baseline w-100">
+                                <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+                                <Icon Name="IconName.PlusCircle" Class="me-2" />
+                                <div class="d-flex align-items-baseline justify-content-between w-100">
+                                    <label class="form-label">Create Triggers</label>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Create.Count)</small>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
                         </div>
@@ -132,8 +140,13 @@
                 <div class="card mb-3">
                     <div class="card-header" role="button" @onclick="OnToggleUpdateTriggersCollapsibleAsync">
                         <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline">
-                                <Icon Name="IconName.ArrowClockwise" Class="me-2" /><label for="tags" class="form-label">Update Triggers</label>
+                            <div class="d-flex align-items-baseline w-100">
+                                <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+                                <Icon Name="IconName.ArrowClockwise" Class="me-2" />
+                                <div class="d-flex align-items-baseline justify-content-between w-100">
+                                    <label for="tags" class="form-label">Update Triggers</label>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Update?.Count ?? 0)</small>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
                         </div>
@@ -146,11 +159,30 @@
                                         <th>Type</th>
                                         <th class="text-center">Source</th>
                                         <th class="text-center">Correlation</th>
+                                        <th class="text-center">Strategy</th>
                                         <th class="text-end fit"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-
+                                    @if(command.Triggers.Update != null)
+                                    {
+                                        foreach(var trigger in command.Triggers.Update)
+                                        {
+                                            <tr>
+                                                <td><code>@trigger.Event.Type</code></td>
+                                                <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                                <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                                <td class="text-center"><span class="border border-primary rounded-pill badge text-primary">@trigger.Strategy</span></td>
+                                                <td class="text-end fit">
+                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveUpdateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
                                 </tbody>
                             </table>
                         </div>
@@ -160,8 +192,13 @@
                 <div class="card mb-3">
                     <div class="card-header" role="button" @onclick="OnToggleDeleteTriggersCollapsibleAsync">
                         <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline">
-                                <Icon Name="IconName.XCircle" Class="me-2" /><label for="tags" class="form-label">Delete Triggers</label>
+                            <div class="d-flex align-items-baseline w-100">
+                                <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+                                <Icon Name="IconName.XCircle" Class="me-2" />
+                                <div class="d-flex align-items-baseline justify-content-between w-100">
+                                    <label for="tags" class="form-label">Delete Triggers</label>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Delete?.Count ?? 0)</small>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
                         </div>
@@ -178,6 +215,24 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @if (command.Triggers.Delete != null)
+                                    {
+                                        foreach (var trigger in command.Triggers.Delete)
+                                        {
+                                            <tr>
+                                                <td><code>@trigger.Event.Type</code></td>
+                                                <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                                <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                                <td class="text-end fit">
+                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveDeleteTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
                                 </tbody>
                             </table>
                         </div>
@@ -190,6 +245,7 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleRelationshipsCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
             <Icon Name="IconName.Link" Class="me-2" /><h6 class="mb-0">Relationships</h6>
         </div>
         <Collapse @ref="relationshipsCollapsible">
@@ -203,6 +259,7 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleIndexesCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
             <Icon Name="IconName.ListOl" Class="me-2" /><h6 class="mb-0">Indexes</h6>
         </div>
         <Collapse @ref="indexesCollapsible">
@@ -347,26 +404,48 @@
     {
         if (triggerEditorModal == null) return;
         var parameters = new Dictionary<string, object>();
-        parameters[nameof(CreateTriggerEditor.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
+        parameters[nameof(CreateTriggerEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
         {
             await triggerEditorModal.HideAsync();
         });
-        parameters[nameof(CreateTriggerEditor.OnCreate)] = EventCallback.Factory.Create<CloudEventCreateTriggerDefinition>(this, async trigger =>
+        parameters[nameof(CreateTriggerEditorModal.OnCreate)] = EventCallback.Factory.Create<CloudEventCreateTriggerDefinition>(this, async trigger =>
         {
             Store.AddTrigger(trigger);
             await triggerEditorModal.HideAsync();
         });
-        await triggerEditorModal.ShowAsync<CreateTriggerEditor>("New create trigger", null, parameters);
+        await triggerEditorModal.ShowAsync<CreateTriggerEditorModal>("New create trigger", null, parameters);
     }
 
     async Task OnAddUpdateTriggerAsync()
     {
-
+        if (triggerEditorModal == null) return;
+        var parameters = new Dictionary<string, object>();
+        parameters[nameof(UpdateTriggerEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
+        {
+            await triggerEditorModal.HideAsync();
+        });
+        parameters[nameof(UpdateTriggerEditorModal.OnCreate)] = EventCallback.Factory.Create<CloudEventUpdateTriggerDefinition>(this, async trigger =>
+        {
+            Store.AddTrigger(trigger);
+            await triggerEditorModal.HideAsync();
+        });
+        await triggerEditorModal.ShowAsync<UpdateTriggerEditorModal>("New update trigger", null, parameters);
     }
 
     async Task OnAddDeleteTriggerAsync()
     {
-
+        if (triggerEditorModal == null) return;
+        var parameters = new Dictionary<string, object>();
+        parameters[nameof(DeleteTriggerEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
+        {
+            await triggerEditorModal.HideAsync();
+        });
+        parameters[nameof(DeleteTriggerEditorModal.OnCreate)] = EventCallback.Factory.Create<CloudEventDeleteTriggerDefinition>(this, async trigger =>
+        {
+            Store.AddTrigger(trigger);
+            await triggerEditorModal.HideAsync();
+        });
+        await triggerEditorModal.ShowAsync<DeleteTriggerEditorModal>("New delete trigger", null, parameters);
     }
 
     async Task OnCreateProjectionTypeAsync()

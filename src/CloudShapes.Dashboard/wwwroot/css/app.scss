@@ -143,3 +143,15 @@ textarea.resize-none {
 td.fit, th.fit {
     width: 1%;
 }
+
+.offcanvas-backdrop {
+    display: none;
+}
+
+.card {
+    &:has(> .collapse.show, .collapsing) {
+        > .card-header .bi.bi-caret-right {
+            transform: rotate(90deg);
+        }
+    }
+}
