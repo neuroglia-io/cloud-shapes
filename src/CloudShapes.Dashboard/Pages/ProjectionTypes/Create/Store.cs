@@ -290,6 +290,80 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi, IMo
     }
 
     /// <summary>
+    /// Adds the specified <see cref="ProjectionRelationshipDefinition"/>
+    /// </summary>
+    /// <param name="relationship">The <see cref="ProjectionRelationshipDefinition"/> to add</param>
+    public void AddRelationship(ProjectionRelationshipDefinition relationship)
+    {
+        Reduce(state => state with
+        {
+            Command = state.Command with
+            {
+                Relationships = new(state.Command.Relationships ?? [])
+                {
+                    relationship
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Removes the specified <see cref="ProjectionRelationshipDefinition"/>
+    /// </summary>
+    /// <param name="relationship">The <see cref="ProjectionRelationshipDefinition"/> to remove</param>
+    public void RemoveRelationship(ProjectionRelationshipDefinition relationship)
+    {
+        var relationships = Get().Command.Relationships ?? [];
+        relationships = [.. relationships];
+        relationships.Remove(relationship);
+        if (relationships.Count == 0) relationships = null;
+        Reduce(state => state with
+        {
+            Command = state.Command with
+            {
+                Relationships = relationships
+            }
+        });
+    }
+
+    /// <summary>
+    /// Adds the specified <see cref="ProjectionIndexDefinition"/>
+    /// </summary>
+    /// <param name="index">The <see cref="ProjectionIndexDefinition"/> to add</param>
+    public void AddIndex(ProjectionIndexDefinition index)
+    {
+        Reduce(state => state with
+        {
+            Command = state.Command with
+            {
+                Indexes = new(state.Command.Indexes ?? [])
+                {
+                    index
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Removes the specified <see cref="ProjectionIndexDefinition"/>
+    /// </summary>
+    /// <param name="index">The <see cref="ProjectionIndexDefinition"/> to remove</param>
+    public void RemoveIndex(ProjectionIndexDefinition index)
+    {
+        var indexes = Get().Command.Indexes ?? [];
+        indexes = [.. indexes];
+        indexes.Remove(index);
+        if (indexes.Count == 0) indexes = null;
+        Reduce(state => state with
+        {
+            Command = state.Command with
+            {
+                Indexes = indexes
+            }
+        });
+    }
+
+    /// <summary>
     /// Adds the specified error
     /// </summary>
     /// <param name="error">The error to add</param>

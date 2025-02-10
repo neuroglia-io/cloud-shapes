@@ -62,7 +62,7 @@ else
                                         foreach(var index in projectionType.Indexes)
                                         {
                                             <div>
-                                                @((MarkupString)string.Join(" + ", index.Fields.Select(f => $"<code>{f}</code>")))
+                                                @((MarkupString)string.Join(" + ", index.Properties.Select(f => $"<code>{f}</code>")))
                                             </div>
                                         }
                                     }

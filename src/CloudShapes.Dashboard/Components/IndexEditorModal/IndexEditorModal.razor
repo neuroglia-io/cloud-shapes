@@ -1,0 +1,45 @@
+﻿@namespace CloudShapes.Dashboard.Components
+
+@if (validationErrors.Count > 0)
+{
+    <div class="alert alert-danger mb-3">
+        <ul>
+            @foreach (var error in validationErrors)
+            {
+                <li>@((MarkupString)error)</li>
+            }
+        </ul>
+    </div>
+}
+<div class="d-flex justify-content-between">
+    <Button Color="ButtonColor.Secondary" Type="ButtonType.Button" Class="w-100 me-1" @onclick="OnCancel">Cancel</Button>
+    <Button Color="ButtonColor.Primary" Type="ButtonType.Button" Class="w-100 ms-1" @onclick="OnCreateAsync">Create</Button>
+</div>
+
+@code {
+    ProjectionIndexDefinition index = new();
+    List<string> validationErrors = [];
+
+    [Parameter] public ProjectionIndexDefinition Index { get; set; } = new();
+
+    [Parameter] public EventCallback<ProjectionIndexDefinition> OnChange { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public EventCallback<ProjectionIndexDefinition> OnCreate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (index != Index) index = Index;
+    }
+
+    async Task OnCreateAsync()
+    {
+        validationErrors.Clear();
+       
+        if (validationErrors.Count > 0) return;
+        if (OnCreate.HasDelegate) await OnCreate.InvokeAsync(index);
+    }
+
+}

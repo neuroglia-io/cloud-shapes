@@ -63,14 +63,14 @@ public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> opt
             foreach (var index in projectionType.Indexes)
             {
                 var keys = index.Text
-                    ? Builders<BsonDocument>.IndexKeys.Text(index.Fields[0])
+                    ? Builders<BsonDocument>.IndexKeys.Text(index.Properties[0])
                     : index.Unique
                         ? index.Descending 
-                            ? Builders<BsonDocument>.IndexKeys.Descending(index.Fields[0])
-                            : Builders<BsonDocument>.IndexKeys.Ascending(index.Fields[0])
+                            ? Builders<BsonDocument>.IndexKeys.Descending(index.Properties[0])
+                            : Builders<BsonDocument>.IndexKeys.Ascending(index.Properties[0])
                         : index.Descending 
-                            ? Builders<BsonDocument>.IndexKeys.Descending(string.Join(",", index.Fields))
-                            : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Fields));
+                            ? Builders<BsonDocument>.IndexKeys.Descending(string.Join(",", index.Properties))
+                            : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Properties));
                 var options = new CreateIndexOptions { Unique = index.Unique };
                 indexModels.Add(new CreateIndexModel<BsonDocument>(keys, options));
             }
