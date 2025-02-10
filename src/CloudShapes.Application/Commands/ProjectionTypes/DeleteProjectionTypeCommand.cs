@@ -53,7 +53,7 @@ public class DeleteProjectionTypeCommandHandler(IOptions<ApplicationOptions> opt
         var projections = DbContext.Set(projectionType);
         await foreach (var projection in projections.ToListAsync(cancellationToken)) await projections.DeleteAsync(projection.GetId()!, cancellationToken).ConfigureAwait(false);
         await ProjectionTypes.DeleteOneAsync(Builders<ProjectionType>.Filter.Eq("_id", BsonValue.Create(projectionType.Name)), new DeleteOptions(), cancellationToken).ConfigureAwait(false);
-        await Database.DropCollectionAsync(projectionType.Name, cancellationToken).ConfigureAwait(false);
+        await Database.DropCollectionAsync(Pluralize.Pluralize(projectionType.Name), cancellationToken).ConfigureAwait(false);
         CloudEventBus.OutputStream.OnNext(new CloudEvent()
         {
             Id = Guid.NewGuid().ToString("N"),

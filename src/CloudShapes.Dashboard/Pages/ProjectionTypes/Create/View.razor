@@ -1,6 +1,8 @@
 ﻿@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create
 @page "/projections/types/new"
+@using CloudShapes.Application.Commands.ProjectionTypes
 @inherits StatefulComponent<CreateProjectionTypeStore, CreateProjectionTypeState>
+@inject NavigationManager Navigation
 
 <ApplicationTitle>New Projection Type</ApplicationTitle>
 
@@ -16,15 +18,15 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label for="name" class="form-label">Name</label>
-                    <input name="name" type="text" class="form-control" placeholder="Name" value="@projectionType.Name" @oninput="e => Store.SetProjectionTypeName((string?)e.Value)">
+                    <input name="name" type="text" class="form-control" placeholder="Name" value="@command.Name" @oninput="e => Store.SetProjectionTypeName((string?)e.Value)">
                 </div>
                 <div class="mb-3">
                     <label for="summary" class="form-label">Summary</label>
-                    <MarkdownInput Value="@projectionType.Summary" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
+                    <MarkdownInput Value="@command.Summary" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
                 </div>
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <MarkdownInput Value="@projectionType.Description" Size="MarkdownInputSize.Normal" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
+                    <MarkdownInput Value="@command.Description" Size="MarkdownInputSize.Normal" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
                 </div>
                 <div>
                     <div class="d-flex justify-content-between align-items-center">
@@ -40,9 +42,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (projectionType.Tags != null)
+                            @if (command.Tags != null)
                             {
-                                foreach (var tag in projectionType.Tags)
+                                foreach (var tag in command.Tags)
                                 {
                                     <tr>
                                         <td>@tag.Key</td>
@@ -54,8 +56,8 @@
                                 }
                             }
                             <tr class="@(showTagEditor == true ? "" : "d-none")">
-                                <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" value="@tagKey" @oninput="e => OnNewTagKeyChanged((string?)e.Value)" /></td>
-                                <td class="p-0"><input type="text" class="form-control" placeholder="Value" value="@tagValue" @oninput="e => OnNewTagValueChanged((string?)e.Value)" /></td>
+                                <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" @bind="tagKey" /></td>
+                                <td class="p-0"><input type="text" class="form-control" placeholder="Value" @bind="tagValue" /></td>
                                 <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
                             </tr>
                         </tbody>
@@ -72,7 +74,7 @@
         <Collapse @ref="schemaCollapsible">
             <div class="card-body">
                 <div>
-                    <MonacoEditor @ref="schemaInput" />
+                    <MonacoEditor @ref="schemaInput" OnTextChanged="value => Store.SetSchemaContent(value)" />
                 </div>
             </div>
         </Collapse>
@@ -106,7 +108,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var trigger in projectionType.Triggers.Create)
+                                    @foreach (var trigger in command.Triggers.Create)
                                     {
                                         <tr>
                                             <td><code>@trigger.Event.Type</code></td>
@@ -212,6 +214,20 @@
         </Collapse>
     </div>
 
+    @if (errors.Count > 0)
+    {
+        <div class="alert alert-danger mb-3">
+            <ul>
+                @foreach (var error in errors)
+                {
+                    <li>@((MarkupString)error)</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <button class="btn btn-primary w-100" @onclick="OnCreateProjectionTypeAsync" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Floppy" /> Create</button>
+
 </div>
 
 <Modal @ref="triggerEditorModal" Size="ModalSize.Large" IsVerticallyCentered="true" />
@@ -227,7 +243,8 @@
     Collapse? relationshipsCollapsible;
     Collapse? indexesCollapsible;
     Modal? triggerEditorModal;
-    ProjectionType projectionType = new();
+    CreateProjectionTypeCommand command = new();
+    EquatableList<string> errors = [];
     bool showTagEditor;
     string? tagKey;
     string? tagValue;
@@ -235,11 +252,18 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        Store.ProjectionType.Subscribe(value =>
+        Store.Command.Subscribe(value =>
         {
             OnStateChanged(_ =>
             {
-                projectionType = value;
+                command = value;
+            });
+        });
+        Store.Errors.Subscribe(value =>
+        {
+            OnStateChanged(_ =>
+            {
+                errors = value;
             });
         });
     }
@@ -300,16 +324,6 @@
         });
     }
 
-    void OnNewTagKeyChanged(string? key)
-    {
-        tagKey = key;
-    }
-
-    void OnNewTagValueChanged(string? value)
-    {
-        tagValue = value;
-    }
-
     void OnConfirmAddTag()
     {
         if (string.IsNullOrWhiteSpace(tagKey)) return;
@@ -324,9 +338,9 @@
 
     void OnRemoveTag(string key)
     {
-        if (projectionType.Tags == null) return;
+        if (command.Tags == null) return;
         Store.RemoveTagFromProjectionType(key);
-        if (projectionType.Tags.Count < 1) projectionType.Tags = null;
+        if (command.Tags.Count < 1) command.Tags = null;
     }
 
     async Task OnAddCreateTriggerAsync()
@@ -347,11 +361,35 @@
 
     async Task OnAddUpdateTriggerAsync()
     {
-        
+
     }
 
     async Task OnAddDeleteTriggerAsync()
     {
-        
+
     }
+
+    async Task OnCreateProjectionTypeAsync()
+    {
+        Store.ClearErrors();
+        var hasErrors = false;
+        if (string.IsNullOrWhiteSpace(command.Name)) 
+        {
+            Store.AddError("<b>Name</b> must be set");
+            hasErrors = true;
+        }
+        if (command.Schema == null)
+        {
+            Store.AddError("<b>Schema</b> must be set");
+            hasErrors = true;
+        }
+        if (command.Triggers.Create.Count < 1)
+        {
+            Store.AddError("At least one <b>Create</b> trigger is required");
+            hasErrors = true;
+        }
+        if (hasErrors) return;
+        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/projections/types", false);
+    }
+
 }

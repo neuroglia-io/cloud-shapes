@@ -1,5 +1,3 @@
-using MongoDB.Bson;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -24,7 +22,7 @@ builder.Services.AddSingleton<IMongoClient>(provider =>
     var options = provider.GetRequiredService<IOptions<ApplicationOptions>>().Value;
     BsonSerializer.RegisterSerializer(new JsonSchemaBsonSerializer());
     BsonSerializer.RegisterSerializer(new DateTimeOffsetBsonSerializer());
-    ConventionRegistry.Register("CamelCase", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
+    ConventionRegistry.Register("ApplicationConventions", new ConventionPack { new CamelCaseElementNameConvention(), new IgnoreIfNullConvention(true) }, type => true);
     return new MongoClient(options.Database.ConnectionString);
 });
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(provider.GetRequiredService<IOptions<ApplicationOptions>>().Value.Database.Name));

@@ -1,22 +1,47 @@
-﻿namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create;
+﻿using CloudShapes.Application.Commands.ProjectionTypes;
+
+namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create;
 
 /// <summary>
 /// Represents the store the the create projection type view
 /// </summary>
 /// <param name="cloudShapesApi">The service used to interact with the Cloud Shapes API</param>
-public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
+/// <param name="monacoEditorHelper">The service used to to facilitate the Monaco editor configuration</param>
+/// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
+/// <param name="yamlSerializer">The service used to serialize/deserialize data to/from YAML</param>
+public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
     : ComponentStore<CreateProjectionTypeState>(new())
 {
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeListState.Loading"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="CreateProjectionTypeState.Loading"/> changes
     /// </summary>
     public IObservable<bool> Loading => this.Select(state => state.Loading).DistinctUntilChanged();
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeListState.ProjectionType"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="CreateProjectionTypeState.Command"/> changes
     /// </summary>
-    public IObservable<ProjectionType> ProjectionType => this.Select(state => state.ProjectionType).DistinctUntilChanged();
+    public IObservable<CreateProjectionTypeCommand> Command => this.Select(state => state.Command).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="CreateProjectionTypeState.Errors"/> changes
+    /// </summary>
+    public IObservable<EquatableList<string>> Errors => this.Select(state => state.Errors).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe changes to the input of the component used to edit the projection type's schema
+    /// </summary>
+    protected Subject<string> SchemaEditorValue { get; } = new Subject<string>();
+
+    /// <inheritdoc/>
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+        this.SchemaEditorValue
+            .Throttle(TimeSpan.FromMilliseconds(300))
+            .DistinctUntilChanged()
+            .Subscribe(text => SetSchema(text));
+    }
 
     /// <summary>
     /// Sets the <see cref="ProjectionType"/>'s name
@@ -26,7 +51,7 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
                 Name = name!
             }
@@ -41,7 +66,7 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
                 Summary = summary
             }
@@ -56,7 +81,7 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
                 Description = description
             }
@@ -72,9 +97,9 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Tags = new EquatableDictionary<string, string>(Get().ProjectionType.Tags ?? [])
+                Tags = new EquatableDictionary<string, string>(Get().Command.Tags ?? [])
                 {
                     [key] = value
                 }
@@ -88,18 +113,52 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     /// <param name="key">The key of the tag to remove</param>
     public void RemoveTagFromProjectionType(string key)
     {
-        var tags = Get().ProjectionType.Tags;
+        var tags = Get().Command.Tags;
         if (tags == null) return;
         tags = [..tags];
         tags.Remove(key);
         if (tags.Count == 0) tags = null;
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
                 Tags = tags
             }
         });
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionType"/>'s raw schema
+    /// </summary>
+    public void SetSchemaContent(string content)
+    {
+        SchemaEditorValue.OnNext(content);
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionType"/>'s schema
+    /// </summary>
+    /// <param name="content">The <see cref="ProjectionType"/>'s content</param>
+    protected void SetSchema(string content)
+    {
+        try
+        {
+            var serializer = monacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)jsonSerializer : yamlSerializer;
+            var schema = string.IsNullOrWhiteSpace(content)
+                ? new JsonSchemaBuilder().Type(SchemaValueType.Object).Build()
+                : serializer.Deserialize<JsonSchema>(content)!;
+            Reduce(state => state with
+            {
+                Command = state.Command with
+                {
+                    Schema = schema
+                }
+            });
+        }
+        catch
+        {
+            return;
+        }
     }
 
     /// <summary>
@@ -110,11 +169,11 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
-                    Create = new(state.ProjectionType.Triggers.Create)
+                    Create = new(state.Command.Triggers.Create)
                     {
                         trigger
                     }
@@ -129,14 +188,14 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     /// <param name="trigger">The <see cref="CloudEventCreateTriggerDefinition"/> to remove</param>
     public void RemoveCreateTrigger(CloudEventCreateTriggerDefinition trigger)
     {
-        var triggers = Get().ProjectionType.Triggers.Create;
+        var triggers = Get().Command.Triggers.Create;
         triggers = [.. triggers];
         triggers.Remove(trigger);
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
                     Create = triggers
                 }
@@ -152,11 +211,11 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
-                    Update = new(state.ProjectionType.Triggers.Update ?? [])
+                    Update = new(state.Command.Triggers.Update ?? [])
                     {
                         trigger
                     }
@@ -171,15 +230,15 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     /// <param name="trigger">The <see cref="CloudEventUpdateTriggerDefinition"/> to remove</param>
     public void RemoveUpdateTrigger(CloudEventUpdateTriggerDefinition trigger)
     {
-        var triggers = Get().ProjectionType.Triggers.Update;
+        var triggers = Get().Command.Triggers.Update;
         triggers = [.. triggers];
         triggers.Remove(trigger);
         if (triggers.Count == 0) triggers = null;
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
                     Update = triggers
                 }
@@ -195,11 +254,11 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     {
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
-                    Delete = new(state.ProjectionType.Triggers.Delete ?? [])
+                    Delete = new(state.Command.Triggers.Delete ?? [])
                     {
                         trigger
                     }
@@ -214,20 +273,64 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi)
     /// <param name="trigger">The <see cref="CloudEventDeleteTriggerDefinition"/> to remove</param>
     public void RemoveDeleteTrigger(CloudEventDeleteTriggerDefinition trigger)
     {
-        var triggers = Get().ProjectionType.Triggers.Delete;
+        var triggers = Get().Command.Triggers.Delete;
         triggers = [.. triggers];
         triggers.Remove(trigger);
         if (triggers.Count == 0) triggers = null;
         Reduce(state => state with
         {
-            ProjectionType = state.ProjectionType with
+            Command = state.Command with
             {
-                Triggers = state.ProjectionType.Triggers with
+                Triggers = state.Command.Triggers with
                 {
                     Delete = triggers
                 }
             }
         });
+    }
+
+    /// <summary>
+    /// Adds the specified error
+    /// </summary>
+    /// <param name="error">The error to add</param>
+    public void AddError(string error)
+    {
+        Reduce(state => state with
+        {
+            Errors = new(state.Errors)
+            {
+                error
+            }
+        });
+    }
+
+    /// <summary>
+    /// Clears all pending errors
+    /// </summary>
+    public void ClearErrors()
+    {
+        Reduce(state => state with
+        {
+            Errors = []
+        });
+    }
+
+    /// <summary>
+    /// Creates the <see cref="ProjectionType"/>
+    /// </summary>
+    /// <returns>A boolean indicating whether or not the <see cref="ProjectionType"/> has been successfully created</returns>
+    public async Task<bool> CreateProjectionTypeAsync()
+    {
+        try
+        {
+            await cloudShapesApi.ProjectionTypes.CreateAsync(Get().Command, CancellationTokenSource.Token);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AddError(ex.Message);
+            return false;
+        }
     }
 
 }

@@ -2,8 +2,14 @@
 @page "/projections/types"
 @inherits StatefulComponent<ProjectionTypeListStore, ProjectionTypeListState>
 @inject IPluralize Pluralize
+@inject NavigationManager Navigation
 
 <ApplicationTitle>Projection Types</ApplicationTitle>
+
+<div class="d-flex justify-content-between p-3">
+    <h4>Projection Types</h4>
+    <button class="btn btn-sm btn-primary" @onclick="OnNewProjectionType" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+</div>
 
 @if (loading)
 {
@@ -107,9 +113,12 @@ else
                                 }
                             </td>
                             <td class="text-center">@projectionType.Metadata.ProjectionCount</td>
-                            <td class="text-end fit">
-                                <button class="btn btn-outline-primary btn-sm" title="Edit the projection" @onclick:preventDefault @onclick:stopPropagation><Icon Name="IconName.Pencil" /></button>
-                                <button class="btn btn-sm btn-outline-danger" title="Delete the projection" @onclick="async _ => await Store.DeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                            <td class="text-end">
+                                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                    <li><a class="dropdown-item text-danger" href="#" @onclick="async _ => await Store.DeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete</a></li>
+                                </ul>
                             </td>
                         </tr>
                     </ItemContent>
@@ -151,6 +160,11 @@ else
             await virtualize.RefreshDataAsync();
             OnStateChanged(_ => { });
         }, CancellationTokenSource.Token);
+    }
+
+    void OnNewProjectionType()
+    {
+        Navigation.NavigateTo("/projections/types/new", false);
     }
 
 }

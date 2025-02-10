@@ -1,16 +1,14 @@
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-var serializationOptionsSetup = JsonSerializer.DefaultOptionsConfiguration;
-JsonSerializer.DefaultOptionsConfiguration = (options) =>
-{
-    serializationOptionsSetup(options);
-    options.WriteIndented = true;
-    options.Converters.Add(new ObjectConverter());
-};
-
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
-builder.Services.Configure(JsonSerializer.DefaultOptionsConfiguration);
+builder.Services.Configure<JsonSerializerOptions>(options =>
+{
+    options.PropertyNameCaseInsensitive = true;
+    options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
+    options.WriteIndented = true;
+    options.Converters.Add(new ObjectConverter());
+});
 builder.Services.AddLogging();
 builder.Services.AddSerialization();
 builder.Services.AddJsonSerializer();
