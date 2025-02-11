@@ -1,5 +1,5 @@
 ﻿$bootstrap-icons-font-dir: '../lib/bootstrap-icons/font/fonts/';
-
+$enable-negative-margins: true;
 @import "../lib/bootstrap-icons/font/bootstrap-icons.scss";
 @import "./theme/theme.scss";
 @import "./blazor-loading.scss";
@@ -85,6 +85,18 @@ h1:focus {
     */
 }
 
+.h-100-px {
+    height: 100px;
+}
+
+.h-200-px {
+    height: 200px;
+}
+
+.h-300-px{
+    height: 300px;
+}
+
 .vh-30{
     height: 30vh!important;
 }
@@ -115,6 +127,31 @@ h1:focus {
     height: calc(100vh - calc(100px + 3.5rem)) !important; 
 }
 
-.monaco-editor-container{
+.monaco-editor-container-large {
     height: 1100px;
+}
+
+nav:has(> div.markdown-input) {
+    display: flex;
+    justify-content: end;
+}
+
+textarea.resize-none {
+    resize: none;
+}
+
+td.fit, th.fit {
+    width: 1%;
+}
+
+.offcanvas-backdrop {
+    display: none;
+}
+
+.card {
+    &:has(> .collapse.show, .collapsing) {
+        > .card-header .bi.bi-caret-right {
+            transform: rotate(90deg);
+        }
+    }
 }

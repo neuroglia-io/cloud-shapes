@@ -1,4 +1,6 @@
-﻿namespace CloudShapes.Api.Client.Services;
+﻿using CloudShapes.Application.Commands.Projections;
+
+namespace CloudShapes.Api.Client.Services;
 
 /// <summary>
 /// Represents the default implementation of the <see cref="IProjectionsApiClient"/> interface
@@ -17,6 +19,18 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
     /// Gets the service used to pluralize words
     /// </summary>
     protected IPluralize Pluralize { get; } = pluralize;
+
+    /// <inheritdoc/>
+    public virtual async Task<object> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var json = JsonSerializer.SerializeToText(command);
+        using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+        using var request = new HttpRequestMessage(HttpMethod.Post, PathPrefix) { Content = content };
+        using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize<object>(json)!;
+    }
 
     /// <inheritdoc/>
     public virtual async Task<object> GetAsync(string type, string id, CancellationToken cancellationToken = default)

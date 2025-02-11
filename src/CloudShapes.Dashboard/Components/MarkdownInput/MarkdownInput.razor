@@ -1,0 +1,53 @@
+﻿@namespace CloudShapes.Dashboard.Components
+
+<div class="w-100 mt-n4">
+    <Tabs NavStyle="NavStyle.Underline" Class="markdown-input">
+        <Tab Title="Edit" Active="true">
+            <Content>
+                <textarea class="w-100 @heightClass overflow-scroll p-3 bg-dark-subtle border-0 resize-none" @oninput="e => OnInputAsync((string?)e.Value)"></textarea>
+            </Content>
+        </Tab>
+        <Tab Title="Preview">
+            <Content>
+                <Markdown Class="@markdownClass">@value</Markdown>
+            </Content>
+        </Tab>
+    </Tabs>
+</div>
+
+@code {
+    MarkdownInputSize height = MarkdownInputSize.Normal;
+    string heightClass = "h-200-px";
+    string markdownClass = $"w-100 h-200-px overflow-scroll p-3 bg-dark-subtle border-0";
+    string? value;
+
+    [Parameter] public MarkdownInputSize Size { get; set; } = MarkdownInputSize.Normal;
+
+    [Parameter] public string? Value { get; set; }
+
+    [Parameter] public EventCallback<ChangeEventArgs> OnInput { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (height != Size)
+        {
+            height = Size;
+            heightClass = height switch
+            {
+                MarkdownInputSize.Small => "h-100-px",
+                MarkdownInputSize.Normal => "h-200-px",
+                _ => "h-300-px"
+            };
+            markdownClass = $"w-100 {heightClass} overflow-scroll p-3 bg-dark-subtle border-0";
+        }
+        if (value != Value) value = Value;
+    }
+
+    async Task OnInputAsync(string? value)
+    {
+        this.value = value;
+        if (OnInput.HasDelegate) await OnInput.InvokeAsync(new() { Value = value });
+    }
+
+}

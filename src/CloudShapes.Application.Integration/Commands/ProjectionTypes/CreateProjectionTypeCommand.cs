@@ -3,8 +3,8 @@
 /// <summary>
 /// Represents the command used to create a new <see cref="ProjectionType"/>
 /// </summary>
-public class CreateProjectionTypeCommand
-    : Command<ProjectionType>
+public record CreateProjectionTypeCommand
+    : ICommand<IOperationResult<ProjectionType>, ProjectionType>
 {
 
     /// <summary>
@@ -32,21 +32,24 @@ public class CreateProjectionTypeCommand
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for creating new projections when specific CloudEvents occur
     /// </summary>
-    public virtual ProjectionTriggerCollection Triggers { get; set; } = null!;
+    public virtual ProjectionTriggerCollection Triggers { get; set; } = new();
 
     /// <summary>
     /// Gets/sets a list containing the indexes, if any, of projections of this type
     /// </summary>
-    public virtual IReadOnlyCollection<ProjectionIndexDefinition>? Indexes { get; set; }
+    public virtual EquatableList<ProjectionIndexDefinition>? Indexes { get; set; }
 
     /// <summary>
     /// Gets/sets a list containing the relationships, if any, of projections of this type
     /// </summary>
-    public virtual IReadOnlyCollection<ProjectionRelationshipDefinition>? Relationships { get; set; }
+    public virtual EquatableList<ProjectionRelationshipDefinition>? Relationships { get; set; }
 
     /// <summary>
     /// Gets/sets a key/value mapping of the tags, if any, associated to the projection type
     /// </summary>
-    public virtual IDictionary<string, string>? Tags { get; set; }
+    public virtual EquatableDictionary<string, string>? Tags { get; set; }
+
+    /// <inheritdoc/>
+    public virtual IDictionary<string, object> ContextData { get; } = new Dictionary<string, object>();
 
 }

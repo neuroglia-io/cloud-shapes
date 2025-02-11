@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="MarkdownInputSize.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
 	<PackageReference Include="Blazor.Bootstrap" Version="3.3.1" />
     <PackageReference Include="BlazorMonaco" Version="3.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.1" />
@@ -19,6 +23,12 @@
   <ItemGroup>
     <ProjectReference Include="..\CloudShapes.Api.Client\CloudShapes.Api.Client.csproj" />
     <ProjectReference Include="..\CloudShapes.Dashboard.StateManagement\CloudShapes.Dashboard.StateManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Components\CreateUpdateEditorModal\UpdateTriggerEditorModal.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
   </ItemGroup>
 
 </Project>

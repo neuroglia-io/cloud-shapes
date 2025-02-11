@@ -2,8 +2,14 @@
 @page "/projections/types"
 @inherits StatefulComponent<ProjectionTypeListStore, ProjectionTypeListState>
 @inject IPluralize Pluralize
+@inject NavigationManager Navigation
 
 <ApplicationTitle>Projection Types</ApplicationTitle>
+
+<div class="d-flex justify-content-between p-3">
+    <h4>Projection Types</h4>
+    <button class="btn btn-sm btn-primary" @onclick="OnNewProjectionType" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+</div>
 
 @if (loading)
 {
@@ -11,146 +17,187 @@
 }
 else
 {
-    <div class="table-container">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th class="sticky-header">Name</th>
-                    <th class="sticky-header">Description</th>
-                    <th class="sticky-header text-center">Created At</th>
-                    <th class="sticky-header text-center">Last Modified</th>
-                    <th class="sticky-header text-center">Version</th>
-                    <th class="sticky-header text-center">Indexes</th>
-                    <th class="sticky-header text-center">Create Triggers</th>
-                    <th class="sticky-header text-center">Update Triggers</th>
-                    <th class="sticky-header text-center">Delete Triggers</th>
-                    <th class="sticky-header text-center">Relationships</th>
-                    <th class="sticky-header text-center">Projections</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <Virtualize @ref="virtualize" Context="projectionType" ItemsProvider="@Store.ProvideProjectionTypesAsync" ItemSize="61">
-                    <ItemContent>
-                        <tr class="cursor-pointer">
-                            <td>@projectionType.Name</td>
-                            <td><small><Markdown>@projectionType.Summary</Markdown></small></td>
-                            <td class="text-center">@projectionType.Metadata.CreatedAt.AsMoment()</td>
-                            <td class="text-center">@projectionType.Metadata.LastModified.AsMoment()</td>
-                            <td class="text-center">@projectionType.Metadata.Version</td>
-                            <td class="text-center">
-                                @if(projectionType.Indexes == null)
-                                {
-                                    <span>-</span>
-                                }
-                                else
-                                {
-                                    foreach(var index in projectionType.Indexes)
+    if (projectionTypes?.Items.Any() != true)
+    {
+        <p class="text-muted text-center my-auto">
+            No projection types are currently defined. <a class="fw-bold" role="button" @onclick="OnNewProjectionType" @onclick:preventDefault="true" @onclick:stopPropagation="true">Click here</a> to create one.
+        </p>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th class="sticky-header">Name</th>
+                        <th class="sticky-header">Description</th>
+                        <th class="sticky-header text-center">Created At</th>
+                        <th class="sticky-header text-center">Last Modified</th>
+                        <th class="sticky-header text-center">Version</th>
+                        <th class="sticky-header text-center">Indexes</th>
+                        <th class="sticky-header text-center">Create Triggers</th>
+                        <th class="sticky-header text-center">Update Triggers</th>
+                        <th class="sticky-header text-center">Delete Triggers</th>
+                        <th class="sticky-header text-center">Relationships</th>
+                        <th class="sticky-header text-center">Projections</th>
+                        <th class="fit"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <Virtualize @ref="virtualize" Context="projectionType" ItemsProvider="@Store.ProvideProjectionTypesAsync" ItemSize="61">
+                        <ItemContent>
+                            <tr class="cursor-pointer">
+                                <td>@projectionType.Name</td>
+                                <td><small><Markdown>@projectionType.Summary</Markdown></small></td>
+                                <td class="text-center">@projectionType.Metadata.CreatedAt.AsMoment()</td>
+                                <td class="text-center">@projectionType.Metadata.LastModified.AsMoment()</td>
+                                <td class="text-center">@projectionType.Metadata.Version</td>
+                                <td class="text-center">
+                                    @if(projectionType.Indexes == null)
                                     {
-                                        <div>
-                                            @((MarkupString)string.Join(" + ", index.Fields.Select(f => $"<code>{f}</code>")))
-                                        </div>
+                                        <span>-</span>
                                     }
-                                }
-                            </td>
-                            <td class="text-center">
-                                @foreach(var trigger in projectionType.Triggers.Create)
-                                {
-                                    <div>
-                                        <code>@trigger.Event.Type</code>
-                                    </div>
-                                }
-                            </td>
-                            <td class="text-center">
-                                @if (projectionType.Triggers.Update == null)
-                                {
-                                    <span>-</span>
-                                }
-                                else
-                                {
-                                    foreach (var trigger in projectionType.Triggers.Update)
+                                    else
+                                    {
+                                        foreach(var index in projectionType.Indexes)
+                                        {
+                                            <div>
+                                                @((MarkupString)string.Join(" + ", index.Properties.Select(f => $"<code>{f}</code>")))
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @foreach(var trigger in projectionType.Triggers.Create)
                                     {
                                         <div>
                                             <code>@trigger.Event.Type</code>
                                         </div>
                                     }
-                                }
-                            </td>
-                            <td class="text-center">
-                                @if (projectionType.Triggers.Delete == null)
-                                {
-                                    <span>-</span>
-                                }
-                                else
-                                {
-                                    foreach (var trigger in projectionType.Triggers.Delete)
+                                </td>
+                                <td class="text-center">
+                                    @if (projectionType.Triggers.Update == null)
                                     {
-                                        <div>
-                                            <code>@trigger.Event.Type</code>
-                                        </div>
+                                        <span>-</span>
                                     }
-                                }
-                            </td>
-                            <td class="text-center">
-                                @if(projectionType.Relationships == null)
-                                {
-                                    <span>-</span>
-                                }
-                                else
-                                {
-                                    foreach(var relationship in projectionType.Relationships)
+                                    else
                                     {
-                                        <div>
-                                            <a href="/projections/types/@relationship.Target">@(relationship.Type == ProjectionRelationshipType.OneToOne ? relationship.Target : Pluralize.Pluralize(relationship.Target))</a>
-                                        </div>
+                                        foreach (var trigger in projectionType.Triggers.Update)
+                                        {
+                                            <div>
+                                                <code>@trigger.Event.Type</code>
+                                            </div>
+                                        }
                                     }
-                                }
-                            </td>
-                            <td class="text-center">@projectionType.Metadata.ProjectionCount</td>
-                            <td class="text-end">
-                                <button class="btn btn-outline-primary btn-sm" title="Edit the projection" @onclick:preventDefault @onclick:stopPropagation><Icon Name="IconName.Pencil" /></button>
-                                <button class="btn btn-sm btn-outline-danger" title="Delete the projection" @onclick="async _ => await Store.DeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
-                            </td>
-                        </tr>
-                    </ItemContent>
-                    <Placeholder>
-                        <tr class="row-placeholder">
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    </Placeholder>
-                </Virtualize>
-            </tbody>
-        </table>
-    </div>
+                                </td>
+                                <td class="text-center">
+                                    @if (projectionType.Triggers.Delete == null)
+                                    {
+                                        <span>-</span>
+                                    }
+                                    else
+                                    {
+                                        foreach (var trigger in projectionType.Triggers.Delete)
+                                        {
+                                            <div>
+                                                <code>@trigger.Event.Type</code>
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if(projectionType.Relationships == null)
+                                    {
+                                        <span>-</span>
+                                    }
+                                    else
+                                    {
+                                        foreach(var relationship in projectionType.Relationships)
+                                        {
+                                            <div>
+                                                <a href="#">@(relationship.Type == ProjectionRelationshipType.OneToOne ? relationship.Target : Pluralize.Pluralize(relationship.Target))</a>
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-center">@projectionType.Metadata.ProjectionCount</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" @onclick="async _ => await OnDeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </ItemContent>
+                        <Placeholder>
+                            <tr class="row-placeholder">
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </Placeholder>
+                    </Virtualize>
+                </tbody>
+            </table>
+        </div>
+    }
 }
 
-@code {
+<ConfirmDialog @ref="dialog" />
 
+@code {
     Virtualize<ProjectionType>? virtualize;
+    ConfirmDialog? dialog;
     bool loading = true;
+    PagedResult<ProjectionType>? projectionTypes;
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), token: CancellationTokenSource.Token);
-        Store.ProjectionTypes.SubscribeAsync(async _ =>
+        Store.ProjectionTypes.SubscribeAsync(async value =>
         {
+            OnStateChanged(_ => 
+            {
+                projectionTypes = value;
+            });
             if (virtualize == null) return;
             await virtualize.RefreshDataAsync();
-            OnStateChanged(_ => { });
         }, CancellationTokenSource.Token);
+    }
+
+    void OnNewProjectionType()
+    {
+        Navigation.NavigateTo("/projections/types/new", false);
+    }
+
+    async Task OnDeleteProjectionTypeAsync(ProjectionType projectionType)
+    {
+        if (dialog == null) return;
+        var confirmation = await dialog.ShowAsync(
+            $"Are you sure you want to delete the '{projectionType.Name}' projection type?",
+            $"The type and its {projectionType.Metadata.ProjectionCount} projection(s) will be permanently deleted. Are you sure you want to proceed?",
+            new ConfirmDialogOptions()
+            {
+                YesButtonColor = ButtonColor.Danger,
+                YesButtonText = "Yes",
+                NoButtonText = "No",
+                IsVerticallyCentered = true
+            }
+        );
+        if (!confirmation) return;
+        await this.Store.DeleteProjectionTypeAsync(projectionType);
     }
 
 }

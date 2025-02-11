@@ -1,0 +1,84 @@
+﻿@namespace CloudShapes.Dashboard.Components
+
+<div>
+    <div class="mb-3">
+        <label for="type" class="form-label">Type</label><span class="ms-1 text-danger">*</span>
+        <input name="type" type="text" class="form-control" placeholder="io.cloud-shapes.events.example.v1" value="@eventFilter.Type" @oninput="async e => await OnTypeChangedAsync((string?)e.Value)" />
+    </div>
+    <div class="mb-3">
+        <label for="source" class="form-label">Source</label>
+        <input name="source" type="url" class="form-control" placeholder="https://cloud-shapes.io" value="@eventFilter.Source" @oninput="async e => await OnSourceChangedAsync((string?)e.Value)" />
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h6>Correlation</h6>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Strategy</label>
+                <div class="form-check form-check-inline">
+                    <RadioInput Name="correlationStrategy" Label="Attribute" @bind-Value="attributeCorrelationStrategy" />
+                </div>
+                <div class="form-check form-check-inline">
+                    <RadioInput Name="correlationStrategy" Label="Expression" @bind-Value="expressionCorrelationStrategy" />
+                </div>
+            </div>
+            <div>
+                @if(attributeCorrelationStrategy)
+                {
+                    <label for="attribute" class="form-label">Attribute</label>
+                    <input name="attribute" type="text" class="form-control" placeholder="subject" value="@eventFilter.Correlation.Attribute" @oninput="async e => await OnCorrelationAttributeChangedAsync((string?)e.Value)" />
+                }
+                else
+                {
+                    <label for="expression" class="form-label">Expression</label>
+                    <input name="expression" type="text" class="form-control" placeholder="${ .data.correlationId }" value="@eventFilter.Correlation.Expression" @oninput="async e => await OnCorrelationExpressionChangedAsync((string?)e.Value)" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    CloudEventFilterDefinition eventFilter = new();
+    bool attributeCorrelationStrategy = true;
+    bool expressionCorrelationStrategy;
+
+    [Parameter] public CloudEventFilterDefinition EventFilter { get; set; } = new();
+
+    [Parameter] public EventCallback<CloudEventFilterDefinition> OnChange { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (eventFilter != EventFilter) eventFilter = EventFilter;
+    }
+
+    async Task OnTypeChangedAsync(string? type)
+    {
+        eventFilter.Type = type!;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(eventFilter);
+    }
+
+    async Task OnSourceChangedAsync(string? source)
+    {
+        eventFilter.Source = source!;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(eventFilter);
+    }
+
+    async Task OnCorrelationAttributeChangedAsync(string? attribute)
+    {
+        eventFilter.Correlation.Expression = null;
+        eventFilter.Correlation.Attribute = attribute;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(eventFilter);
+    }
+
+    async Task OnCorrelationExpressionChangedAsync(string? expression)
+    {
+        eventFilter.Correlation.Attribute = null;
+        eventFilter.Correlation.Expression = expression;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(eventFilter);
+    }
+
+}

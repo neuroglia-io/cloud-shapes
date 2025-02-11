@@ -58,7 +58,8 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         await base.InitializeAsync();
         await cloudEventHub.StartAsync().ConfigureAwait(false);
         CloudEvents = cloudEventHub.Stream();
-        CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, this.CancellationTokenSource.Token);
+        CloudEvents.Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type)).SubscribeAsync(async _ => await ListProjectionTypesAsync(), CancellationTokenSource.Token);
+        CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
         ProjectionTypeName.SubscribeAsync(async typeName =>
         {
             var projectionTypes = Get().ProjectionTypes;
@@ -160,7 +161,14 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <returns>A new awaitable <see cref="Task"/></returns>
     public async Task DeleteProjectionAsync(string id)
     {
-        await cloudShapesApi.Projections.DeleteAsync(Get().ProjectionType!.Name, id, CancellationTokenSource.Token);
+        try
+        {
+            await cloudShapesApi.Projections.DeleteAsync(Get().ProjectionType!.Name, id, CancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            throw; //todo: show error to end user instead
+        }
         await ListProjectionsAsync();
     }
 
@@ -232,7 +240,17 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <returns>A new <see cref="SidebarDataProviderResult"/></returns>
     public Task<SidebarDataProviderResult> ProvideSidebarDataAsync(SidebarDataProviderRequest request)
     {
-        var navItems = Get().ProjectionTypes.Select(t =>
+        var navItems = new List<NavItem>()
+        {
+            new()
+            {
+                Href = $"/projections/types/new",
+                IconName = IconName.PlusSquare,
+                Text = "New...",
+                Class = "border-bottom border-secondary-subtle"
+            }
+        };
+        navItems.AddRange(Get().ProjectionTypes.Select(t =>
         {
             var plural = pluralize.Pluralize(t.Name);
             return new NavItem()
@@ -241,7 +259,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
                 IconName = IconName.Cast,
                 Text = $"{plural} ({t.Metadata.ProjectionCount})"
             };
-        });
+        }));
         return Task.FromResult(request.ApplyTo(navItems));
     }
 

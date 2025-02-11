@@ -1,0 +1,135 @@
+﻿@namespace CloudShapes.Dashboard.Components
+@inject IMonacoEditorHelper MonacoEditorHelper
+@inject IJsonSerializer JsonSerializer
+@inject IYamlSerializer YamlSerializer
+@inject ICloudShapesApiClient ApiClient
+
+@if (loading)
+{
+    <Loader />
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+            <Icon Name="IconName.InfoCircle" Class="me-2" />
+            <h6 class="mb-0">Information</h6>
+        </div>
+        <Collapse @ref="informationCollapsible" Toggle="true">
+            <div class="card-body">
+                <div>
+                    <label for="id" class="form-label">Id</label>
+                    <input name="id" type="text" placeholder="Id" class="form-control" @bind="id" />
+                </div>
+            </div>
+        </Collapse>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleStateAsync">
+            <Icon Name="IconName.CaretRight" Class="caret text-secondary me-2" />
+            <Icon Name="IconName.Cast" Class="me-2" />
+            <h6>State</h6>
+        </div>
+        <Collapse @ref="stateCollapsible" Toggle="true">
+            <div class="card-body">
+                <MonacoEditor @ref="stateEditor" OnTextChanged="OnStateChanged" />
+            </div>
+        </Collapse>
+    </div>
+
+    @if (validationErrors.Count > 0)
+    {
+        <div class="alert alert-danger mb-3">
+            <ul>
+                @foreach (var error in validationErrors)
+                {
+                    <li>@((MarkupString)error)</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between">
+        <Button Color="ButtonColor.Secondary" Type="ButtonType.Button" Class="w-100 me-1" @onclick="OnCancel">Cancel</Button>
+        <Button Color="ButtonColor.Primary" Type="ButtonType.Button" Class="w-100 ms-1" @onclick="OnCreateAsync">Create</Button>
+    </div>
+}
+
+@code {
+    Collapse? informationCollapsible;
+    Collapse? stateCollapsible;
+    ProjectionType projectionType = null!;
+    MonacoEditor? stateEditor;
+    bool loading;
+    string? id;
+    string? rawState;
+    List<string> validationErrors = [];
+
+    [Parameter] public ProjectionType ProjectionType { get; set; } = null!;
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public EventCallback<object> OnCreate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionType != ProjectionType) projectionType = ProjectionType;
+    }
+
+    async Task OnToggleInformationCollapsibleAsync()
+    {
+        if (informationCollapsible == null) return;
+        await informationCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleStateAsync()
+    {
+        if (stateCollapsible == null) return;
+        await stateCollapsible.ToggleAsync();
+    }
+
+    void OnStateChanged(string value)
+    {
+        rawState = value;
+    }
+
+    async Task OnCreateAsync()
+    {
+        validationErrors.Clear();
+        if (string.IsNullOrWhiteSpace(id)) validationErrors.Add("<b>Id</b> must be set");
+        if (string.IsNullOrWhiteSpace(rawState)) validationErrors.Add("<b>State</b> must be set");
+        if (validationErrors.Count > 0) return;
+        var serializer = MonacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)JsonSerializer : YamlSerializer;
+        var state = string.IsNullOrWhiteSpace(rawState) 
+            ? []
+            : serializer.Deserialize<Dictionary<string, object>>(rawState)!;
+        var jsonNode = JsonSerializer.SerializeToNode(state);
+        var evaluationOptions = new EvaluationOptions()
+        {
+            OutputFormat = OutputFormat.List
+        };
+        var evaluationResults = projectionType.Schema.Evaluate(jsonNode, evaluationOptions);
+        if (!evaluationResults.IsValid) 
+        {
+            validationErrors = evaluationResults.Details.Where(d => d.Errors != null).SelectMany(d => d.Errors!).Select(e => e.Value).ToList() ?? ["<b>State</b> is invalid"];
+            return;
+        }
+        try
+        {
+            loading = true;
+            StateHasChanged();
+            await ApiClient.Projections.CreateAsync(new(projectionType.Name, id!, state));
+            loading = false;
+        }
+        catch(Exception ex)
+        {
+            validationErrors.Add(ex.Message);
+            return;
+        }
+        if (OnCreate.HasDelegate) await OnCreate.InvokeAsync(state);
+        stateEditor?.Reset();
+    }
+
+}

@@ -10,7 +10,7 @@ namespace CloudShapes.Application.Commands.ProjectionTypes;
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
 /// <param name="pluralize">The service used to pluralize terms</param>
 /// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
-public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IPluralize pluralize, ICloudEventBus cloudEventBus)
+public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> options, IMediator mediator, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IPluralize pluralize, ICloudEventBus cloudEventBus)
     : ICommandHandler<CreateProjectionTypeCommand, ProjectionType>
 {
 
@@ -18,6 +18,11 @@ public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> opt
     /// Gets the current <see cref="ApplicationOptions"/>
     /// </summary>
     protected ApplicationOptions Options { get; } = options.Value;
+
+    /// <summary>
+    /// Gets the service used to mediate calls
+    /// </summary>
+    protected IMediator Mediator { get; } = mediator;
 
     /// <summary>
     /// Gets the current <see cref="IMongoDatabase"/>
@@ -43,38 +48,51 @@ public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> opt
     public virtual async Task<IOperationResult<ProjectionType>> HandleAsync(CreateProjectionTypeCommand command, CancellationToken cancellationToken = default)
     {
         var projectionType = new ProjectionType(command.Name, command.Schema, command.Triggers, command.Indexes, command.Relationships, command.Summary, command.Description, command.Tags);
-        await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (MongoWriteException ex) when(ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, $"A projection type with the specified name '{command.Name}' already exists"));
+        }
         var collectionName =  Pluralize.Pluralize(projectionType.Name);
         var collectionNames = await (await Database.ListCollectionNamesAsync(new ListCollectionNamesOptions(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (collectionNames.Contains(collectionName)) throw new Exception($"A ProjectionType with the specified name '{command.Name}' already exists");
+        if (collectionNames.Contains(collectionName)) throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, $"A projection type with the specified name '{command.Name}' already exists"));
         if (command.Relationships != null)
         {
             foreach(var relationship in command.Relationships)
             {
                 var targetCollectionName = Pluralize.Pluralize(relationship.Target);
-                if (!collectionNames.Contains(targetCollectionName)) throw new NullReferenceException($"Failed to find a ProjectionType with the specified name '{relationship.Target}'");
+                if (!collectionNames.Contains(targetCollectionName)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, $"Failed to find a projection type with the specified name '{relationship.Target}'"));
             }
         }
         await Database.CreateCollectionAsync(collectionName, new CreateCollectionOptions(), cancellationToken).ConfigureAwait(false);
         var collection = Database.GetCollection<BsonDocument>(collectionName);
         if (projectionType.Indexes != null)
         {
-            var indexModels = new List<CreateIndexModel<BsonDocument>>();
             foreach (var index in projectionType.Indexes)
             {
                 var keys = index.Text
-                    ? Builders<BsonDocument>.IndexKeys.Text(index.Fields[0])
+                    ? Builders<BsonDocument>.IndexKeys.Text(index.Properties[0])
                     : index.Unique
-                        ? index.Descending 
-                            ? Builders<BsonDocument>.IndexKeys.Descending(index.Fields[0])
-                            : Builders<BsonDocument>.IndexKeys.Ascending(index.Fields[0])
-                        : index.Descending 
-                            ? Builders<BsonDocument>.IndexKeys.Descending(string.Join(",", index.Fields))
-                            : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Fields));
+                        ? index.Descending
+                            ? Builders<BsonDocument>.IndexKeys.Descending(index.Properties[0])
+                            : Builders<BsonDocument>.IndexKeys.Ascending(index.Properties[0])
+                        : index.Descending
+                            ? Builders<BsonDocument>.IndexKeys.Descending(string.Join(",", index.Properties))
+                            : Builders<BsonDocument>.IndexKeys.Ascending(string.Join(",", index.Properties));
                 var options = new CreateIndexOptions { Unique = index.Unique };
-                indexModels.Add(new CreateIndexModel<BsonDocument>(keys, options));
+                try
+                {
+                    await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(keys, options), new CreateOneIndexOptions(), cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await Mediator.ExecuteAndUnwrapAsync(new DeleteProjectionTypeCommand(projectionType.Name), cancellationToken).ConfigureAwait(false);
+                    throw new ProblemDetailsException(new ProblemDetails(Problems.Types.IndexCreationFailed, Problems.Titles.IndexCreationFailed, Problems.Statuses.Unprocessable, $"Failed to create the index with name '{index.Name}': {ex.Message}"));
+                }
             }
-            await collection.Indexes.CreateManyAsync(indexModels, new CreateManyIndexesOptions(), cancellationToken).ConfigureAwait(false);
         }
         CloudEventBus.OutputStream.OnNext(new CloudEvent()
         {

@@ -1,16 +1,20 @@
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-var serializationOptionsSetup = JsonSerializer.DefaultOptionsConfiguration;
-JsonSerializer.DefaultOptionsConfiguration = (options) =>
-{
-    serializationOptionsSetup(options);
-    options.WriteIndented = true;
-    options.Converters.Add(new ObjectConverter());
-};
-
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
-builder.Services.Configure(JsonSerializer.DefaultOptionsConfiguration);
+builder.Services.Configure<JsonSerializerOptions>(options =>
+{
+    var defaultConfiguration = Neuroglia.Serialization.Json.JsonSerializer.DefaultOptionsConfiguration;
+    Neuroglia.Serialization.Json.JsonSerializer.DefaultOptionsConfiguration = (serializerOptions) =>
+    {
+        defaultConfiguration(serializerOptions);
+        serializerOptions.PropertyNameCaseInsensitive = true;
+        serializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull;
+        serializerOptions.WriteIndented = true;
+    };
+    Neuroglia.Serialization.Json.JsonSerializer.DefaultOptionsConfiguration(options);
+    options.Converters.Add(new ObjectConverter());
+});
 builder.Services.AddLogging();
 builder.Services.AddSerialization();
 builder.Services.AddJsonSerializer();
@@ -32,4 +36,5 @@ builder.Services.AddCloudShapesApiClient(options =>
     options.BaseAddress = new(builder.HostEnvironment.BaseAddress);
 });
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+await app.RunAsync();

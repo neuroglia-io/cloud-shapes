@@ -1,4 +1,5 @@
-﻿using CloudShapes.Application.Queries.Projections;
+﻿using CloudShapes.Application.Commands.Projections;
+using CloudShapes.Application.Queries.Projections;
 
 namespace CloudShapes.Api.Controllers;
 
@@ -10,6 +11,21 @@ namespace CloudShapes.Api.Controllers;
 public class ProjectionsController(IMediator mediator)
     : Controller
 {
+
+    /// <summary>
+    /// Creates a new projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
+    [HttpPost]
+    [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    public async Task<IActionResult> CreateProjection([FromBody] CreateProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var result = await mediator.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+        return this.Process(result);
+    }
 
     /// <summary>
     /// Gets the specified projection
@@ -55,7 +71,7 @@ public class ProjectionsController(IMediator mediator)
     public async Task<IActionResult> DeleteProjection(string type, string id, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
-        var result = await mediator.ExecuteAsync(new DeleteProjectionQuery(type, id), cancellationToken).ConfigureAwait(false);
+        var result = await mediator.ExecuteAsync(new DeleteProjectionCommand(type, id), cancellationToken).ConfigureAwait(false);
         return this.Process(result, (int)HttpStatusCode.NoContent);
     }
 

@@ -1,5 +1,3 @@
-using MongoDB.Bson;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -7,11 +5,21 @@ builder.Services.AddRouting(options =>
     options.LowercaseUrls = true;
 });
 builder.Services.AddResponseCompression();
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new ProblemDetailsExceptionFilter());
+}).AddJsonOptions(options =>
     {
         JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
         options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
     });
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions = null!;
+    };
+});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddMediator(options =>
@@ -24,7 +32,7 @@ builder.Services.AddSingleton<IMongoClient>(provider =>
     var options = provider.GetRequiredService<IOptions<ApplicationOptions>>().Value;
     BsonSerializer.RegisterSerializer(new JsonSchemaBsonSerializer());
     BsonSerializer.RegisterSerializer(new DateTimeOffsetBsonSerializer());
-    ConventionRegistry.Register("CamelCase", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
+    ConventionRegistry.Register("ApplicationConventions", new ConventionPack { new CamelCaseElementNameConvention(), new IgnoreIfNullConvention(true) }, type => true);
     return new MongoClient(options.Database.ConnectionString);
 });
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(provider.GetRequiredService<IOptions<ApplicationOptions>>().Value.Database.Name));
