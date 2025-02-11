@@ -3,7 +3,7 @@
 </p>
 <hr>
 
-# **Cloud Shapes** – Event-Driven Projections Database  
+Event-Driven Projections Database  
 
 **Cloud Shapes** is an **event-driven database** designed to **dynamically generate, update, and delete projections** based on **CloudEvents**. It supports **real-time relationship management**, **embedded data synchronization**, and **write-time updates** for efficient, **event-driven materialization of data**.  
 
