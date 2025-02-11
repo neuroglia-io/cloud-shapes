@@ -13,6 +13,9 @@ on:
 env:
   SOLUTION: ./CloudShapes.sln
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
