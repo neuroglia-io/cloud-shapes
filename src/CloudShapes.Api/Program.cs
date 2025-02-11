@@ -53,6 +53,7 @@ builder.Services.AddSingleton<IPatchHandler, JsonPatchHandler>();
 builder.Services.AddSingleton<IPatchHandler, JsonStrategicMergePatchHandler>();
 builder.Services.AddSingleton<ISchemaValidator, SchemaValidator>();
 builder.Services.AddSingleton<IDbContext, DbContext>();
+builder.Services.AddHostedService<DatabaseProvisioner>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

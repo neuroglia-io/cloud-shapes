@@ -14,10 +14,11 @@
 global using CloudShapes.Application.Configuration;
 global using CloudShapes.Application.Services;
 global using CloudShapes.Data;
-global using CloudShapes.Integration.Events.Projections;
 global using CloudShapes.Data.Models;
+global using CloudShapes.Integration.Events.Projections;
 global using Json.Schema;
 global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Options;
 global using MongoDB.Bson;
