@@ -52,6 +52,6 @@ public record CloudEventFilterDefinition
     /// <summary>
     /// Gets/sets an object used to configure how to resolve the correlation id of filtered CloudEvents
     /// </summary>
-    public virtual CloudEventCorrelationDefinition Correlation { get; set; } = null!;
+    public virtual CloudEventCorrelationDefinition Correlation { get; set; } = new();
 
 }

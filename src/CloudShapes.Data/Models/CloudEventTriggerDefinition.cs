@@ -22,6 +22,6 @@ public abstract record CloudEventTriggerDefinition
     /// <summary>
     /// Gets/sets an object used to configure triggering CloudEvents
     /// </summary>
-    public virtual CloudEventFilterDefinition Event { get; set; } = null!;
+    public virtual CloudEventFilterDefinition Event { get; set; } = new();
 
 }

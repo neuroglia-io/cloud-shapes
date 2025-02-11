@@ -27,7 +27,7 @@ public record ProjectionIndexDefinition
     /// <summary>
     /// Gets/sets a list containing the properties on which the index is defined
     /// </summary>
-    public virtual EquatableList<string> Properties { get; set; } = null!;
+    public virtual EquatableList<string> Properties { get; set; } = [];
 
     /// <summary>
     /// Gets/sets a boolean that defines whether or not the index is unique
