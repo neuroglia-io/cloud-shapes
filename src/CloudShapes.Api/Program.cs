@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using MongoDB.Bson;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
