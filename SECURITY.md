@@ -35,7 +35,7 @@ To **enhance the security and stability** of Cloud Shapes, follow these **best p
 
 ### **3️⃣ Event Security and Validation**
 - Ensure that **ingested CloudEvents** are properly **validated** before processing.
-- Use **schema validation** (`JSchema`) to enforce **event structure correctness** and prevent injection attacks.
+- Use **schema validation** (`JsonSchema`) to enforce **event structure correctness** and prevent injection attacks.
 - Implement **rate limiting** to prevent abuse from excessive event submissions.
 
 ### **4️⃣ Access Control and Authentication**

@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    <FileVersion>$(VersionPrefix)</FileVersion>
+    <NeutralLanguage>en</NeutralLanguage>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <Title>Cloud Shapes Integration</Title>
+	<Description>Contains the models and services used to integrate the Cloud Shapes API</Description>
+	<PackageTags>cloud-shapes;integration</PackageTags>
+	<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+	<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+	<PackageReadmeFile>readme.md</PackageReadmeFile>
+	<PackageProjectUrl>https://github.com/neuroglia-io/cloud-shapes</PackageProjectUrl>
+	<Copyright>Copyright © 2025-Present The Cloud Shapes Authors. All rights reserved.</Copyright>
+	<RepositoryUrl>https://github.com/neuroglia-io/cloud-shapes</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Neuroglia.Mediation" Version="4.19.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CloudShapes.Data\CloudShapes.Data.csproj" />
+  </ItemGroup>
+	
+</Project>

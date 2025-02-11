@@ -11,7 +11,8 @@ env:
   SOLUTION: ./CloudShapes.sln
 
 jobs:
-  Build:
+  build:
+    name: Build
     runs-on: ubuntu-latest
     strategy:
       matrix:

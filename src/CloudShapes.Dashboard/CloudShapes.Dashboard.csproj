@@ -4,6 +4,17 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	<VersionPrefix>0.1.0</VersionPrefix>
+	<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+	<FileVersion>$(VersionPrefix)</FileVersion>
+	<NeutralLanguage>en</NeutralLanguage>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+	<Copyright>Copyright © 2025-Present The Cloud Shapes Authors. All rights reserved.</Copyright>
+	<PackageProjectUrl>https://github.com/neuroglia-io/cloud-shapes</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/neuroglia-io/cloud-shapes</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
