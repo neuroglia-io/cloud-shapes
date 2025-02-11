@@ -28,7 +28,7 @@
     .loading-progress circle {
         fill: none;
         stroke: $cyan-600;
-        stroke-width: 0.2rem;
+        stroke-width: 0.3rem;
         transform-origin: 50% 50%;
         transform: rotate(-90deg);
     }
@@ -40,9 +40,9 @@
     }
 
     .loading-logo {
-        position: absolute;
+        margin-top: -7px;
         fill: $primary-dark;
-        height: 100px;
+        height: 45px;
     }
 
     .loading-progress-text {
