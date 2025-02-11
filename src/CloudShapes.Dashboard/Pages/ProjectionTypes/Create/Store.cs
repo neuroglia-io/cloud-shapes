@@ -1,4 +1,17 @@
-﻿using CloudShapes.Application.Commands.ProjectionTypes;
+﻿// Copyright © 2025-Present The Cloud Shapes Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License"),
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using CloudShapes.Integration.Commands.ProjectionTypes;
 
 namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create;
 
@@ -61,7 +74,7 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi, IMo
     /// <summary>
     /// Sets the <see cref="ProjectionType"/>'s summary
     /// </summary>
-    /// <param name="name">The <see cref="ProjectionType"/>'s summary</param>
+    /// <param name="summary">The <see cref="ProjectionType"/>'s summary</param>
     public void SetProjectionTypeSummary(string? summary)
     {
         Reduce(state => state with
@@ -76,7 +89,7 @@ public class CreateProjectionTypeStore(ICloudShapesApiClient cloudShapesApi, IMo
     /// <summary>
     /// Sets the <see cref="ProjectionType"/>'s description
     /// </summary>
-    /// <param name="name">The <see cref="ProjectionType"/>'s description</param>
+    /// <param name="description">The <see cref="ProjectionType"/>'s description</param>
     public void SetProjectionTypeDescription(string? description)
     {
         Reduce(state => state with

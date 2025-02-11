@@ -1,3 +1,18 @@
+﻿// Copyright © 2025-Present The Cloud Shapes Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License"),
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using MongoDB.Bson;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -5,21 +20,11 @@ builder.Services.AddRouting(options =>
     options.LowercaseUrls = true;
 });
 builder.Services.AddResponseCompression();
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add(new ProblemDetailsExceptionFilter());
-}).AddJsonOptions(options =>
+builder.Services.AddControllers().AddJsonOptions(options =>
     {
         JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
         options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
     });
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
-    {
-        context.ProblemDetails.Extensions = null!;
-    };
-});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddMediator(options =>
@@ -32,7 +37,7 @@ builder.Services.AddSingleton<IMongoClient>(provider =>
     var options = provider.GetRequiredService<IOptions<ApplicationOptions>>().Value;
     BsonSerializer.RegisterSerializer(new JsonSchemaBsonSerializer());
     BsonSerializer.RegisterSerializer(new DateTimeOffsetBsonSerializer());
-    ConventionRegistry.Register("ApplicationConventions", new ConventionPack { new CamelCaseElementNameConvention(), new IgnoreIfNullConvention(true) }, type => true);
+    ConventionRegistry.Register("CamelCase", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
     return new MongoClient(options.Database.ConnectionString);
 });
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(provider.GetRequiredService<IOptions<ApplicationOptions>>().Value.Database.Name));

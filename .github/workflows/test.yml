@@ -1,4 +1,4 @@
-name: Test
+name: .NET
 
 on:
   pull_request:
@@ -13,8 +13,12 @@ on:
 env:
   SOLUTION: ./CloudShapes.sln
 
+permissions:
+  contents: read
+
 jobs:
-  Test:
+  test:
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:

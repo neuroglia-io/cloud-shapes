@@ -8,7 +8,7 @@
 
 ✅ **Projection-Based Data Model** – Store and query data as **projections**, materialized from events.  
 ✅ **Event-Driven Writes** – Automatically create, update, or delete projections when **CloudEvents** occur.  
-✅ **Schema-Enforced Storage** – Validate projection states using **JSON Schema (`JSchema`)**.  
+✅ **Schema-Enforced Storage** – Validate projection states using **JSON Schema (`JsonSchema`)**.  
 ✅ **Real-Time Relationship Updates** – Maintain **data consistency** with **embedded relationships**.  
 ✅ **Write-Time Data Embedding** – Merge related projection data **at write time** for optimized queries.  
 ✅ **Indexing & Querying** – Define indexes for fast lookups on **projection properties**.  
@@ -19,7 +19,7 @@
 ## **🔄 How Cloud Shapes Works**  
 
 1. **Define a `ProjectionType`**  
-   - Each **projection type** is defined by a **schema (`JSchema`)**.  
+   - Each **projection type** is defined by a **schema (`JsonSchema`)**.  
    - Triggers determine **when new projections should be created** from incoming **CloudEvents**.  
 
 2. **CloudEvents Ingestion**  
@@ -117,7 +117,7 @@ Cloud Shapes dynamically updates projections when **CloudEvents** are received:
 ✅ **Fully Event-Driven** – No manual updates, all changes are event-driven.  
 ✅ **Real-Time Consistency** – Embedded data updates instantly on related projection changes.  
 ✅ **Write-Time Optimizations** – Data embedding reduces **query-time overhead**.  
-✅ **Schema-Enforced Validation** – Ensures **data integrity** using JSON Schema (`JSchema`).  
+✅ **Schema-Enforced Validation** – Ensures **data integrity** using JSON Schema (`JsonSchema`).  
 ✅ **Scalable & Distributed** – Built for **high-throughput event-driven systems**.  
 
 ---
