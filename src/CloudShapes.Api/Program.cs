@@ -5,11 +5,21 @@ builder.Services.AddRouting(options =>
     options.LowercaseUrls = true;
 });
 builder.Services.AddResponseCompression();
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new ProblemDetailsExceptionFilter());
+}).AddJsonOptions(options =>
     {
         JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
         options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
     });
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions = null!;
+    };
+});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddMediator(options =>

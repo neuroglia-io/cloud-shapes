@@ -27,7 +27,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <MarkdownInput Value="@command.Description" Size="MarkdownInputSize.Normal" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
+                    <MarkdownInput Value="@command.Description" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
                 </div>
                 <div>
                     <div class="d-flex justify-content-between align-items-center">
@@ -331,9 +331,9 @@
                                             <div><code>@property</code></div>
                                         }
                                     </td>
-                                    <td class="text-center"><input type="checkbox" value="@index.Unique" readonly class="form-check" /></td>
-                                    <td class="text-center"><input type="checkbox" value="@index.Descending" readonly class="form-check" /></td>
-                                    <td class="text-center"><input type="checkbox" value="@index.Text" readonly class="form-check" /></td>
+                                    <td class="text-center"><input type="checkbox" checked="@index.Unique" disabled class="form-check mx-auto" /></td>
+                                    <td class="text-center"><input type="checkbox" checked="@index.Descending" disabled class="form-check mx-auto" /></td>
+                                    <td class="text-center"><input type="checkbox" checked="@index.Text" disabled class="form-check mx-auto" /></td>
                                     <td class="text-end fit">
                                         <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
                                         <ul class="dropdown-menu">
@@ -367,6 +367,7 @@
 </div>
 
 <Modal @ref="modal" Size="ModalSize.Large" IsVerticallyCentered="true" />
+<ConfirmDialog @ref="dialog" />
 
 @code{
     Collapse? informationCollapsible;
@@ -379,6 +380,7 @@
     Collapse? relationshipsCollapsible;
     Collapse? indexesCollapsible;
     Modal? modal;
+    ConfirmDialog? dialog;
     CreateProjectionTypeCommand command = new();
     EquatableList<string> errors = [];
     bool showTagEditor;
@@ -479,29 +481,6 @@
         if (command.Tags.Count < 1) command.Tags = null;
     }
 
-    async Task OnCreateProjectionTypeAsync()
-    {
-        Store.ClearErrors();
-        var hasErrors = false;
-        if (string.IsNullOrWhiteSpace(command.Name))
-        {
-            Store.AddError("<b>Name</b> must be set");
-            hasErrors = true;
-        }
-        if (command.Schema == null)
-        {
-            Store.AddError("<b>Schema</b> must be set");
-            hasErrors = true;
-        }
-        if (command.Triggers.Create.Count < 1)
-        {
-            Store.AddError("At least one <b>Create</b> trigger is required");
-            hasErrors = true;
-        }
-        if (hasErrors) return;
-        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/projections/types", false);
-    }
-
     async Task OnAddCreateTriggerAsync()
     {
         if (modal == null) return;
@@ -554,6 +533,7 @@
     {
         if (modal == null) return;
         var parameters = new Dictionary<string, object>();
+        parameters[nameof(RelationshipEditorModal.Schema)] = command.Schema;
         parameters[nameof(RelationshipEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
         {
             await modal.HideAsync();
@@ -570,6 +550,7 @@
     {
         if (modal == null) return;
         var parameters = new Dictionary<string, object>();
+        parameters[nameof(IndexEditorModal.Schema)] = command.Schema;
         parameters[nameof(IndexEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
         {
             await modal.HideAsync();
@@ -580,6 +561,55 @@
             await modal.HideAsync();
         });
         await modal.ShowAsync<IndexEditorModal>("New index", null, parameters);
+    }
+
+    async Task OnCreateProjectionTypeAsync()
+    {
+        Store.ClearErrors();
+        var hasErrors = false;
+        if (string.IsNullOrWhiteSpace(command.Name))
+        {
+            Store.AddError("<b>Name</b> must be set");
+            hasErrors = true;
+        }
+        if (command.Schema == null)
+        {
+            Store.AddError("<b>Schema</b> must be set");
+            hasErrors = true;
+        }
+        else
+        {
+            var schemaType = command.Schema.GetJsonType();
+            if (schemaType.HasValue && schemaType.Value != SchemaValueType.Object)
+            {
+                Store.AddError("<b>Schema</b> must define an object");
+                hasErrors = true;
+            }
+        }
+        if (command.Triggers.Create.Count < 1)
+        {
+            Store.AddError("At least one <b>Create</b> trigger is required");
+            hasErrors = true;
+        }
+        if (hasErrors) return;
+        var properties = command.Schema!.GetProperties();
+        if (dialog != null && (properties == null || properties.Count < 1)) 
+        {
+            var confirmation = await dialog.ShowAsync(
+                "Create a propertyless Projection Type?",
+                "While a projection type with no defined properties is valid, it is strongly recommended to add them to enhance description, validation, navigation, and search.",
+                "Do you want to proceed with creating the product anyway?",
+                new ConfirmDialogOptions()
+                {
+                    YesButtonColor = ButtonColor.Warning,
+                    YesButtonText = "Yes",
+                    NoButtonText = "No",
+                    IsVerticallyCentered = true
+                }
+            );
+            if (!confirmation) return;
+        }
+        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/projections/types", false);
     }
 
 }

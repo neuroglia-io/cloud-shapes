@@ -161,7 +161,14 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <returns>A new awaitable <see cref="Task"/></returns>
     public async Task DeleteProjectionAsync(string id)
     {
-        await cloudShapesApi.Projections.DeleteAsync(Get().ProjectionType!.Name, id, CancellationTokenSource.Token);
+        try
+        {
+            await cloudShapesApi.Projections.DeleteAsync(Get().ProjectionType!.Name, id, CancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            throw; //todo: show error to end user instead
+        }
         await ListProjectionsAsync();
     }
 

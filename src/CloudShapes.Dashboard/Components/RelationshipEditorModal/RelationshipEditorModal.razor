@@ -1,4 +1,62 @@
 ﻿@namespace CloudShapes.Dashboard.Components
+@inject ICloudShapesApiClient ApiClient
+
+<div>
+
+    <div class="mb-3">
+        <label for="type" class="form-label">Type</label><span class="ms-1 text-danger">*</span>
+        <select name="type" class="form-select" @oninput="async e => await OnTypeChangedAsync((string)e.Value!)">
+            <option value="one-to-one">one-to-one</option>
+            <option value="one-to-many">one-to-many</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="target" class="form-label">Target</label><span class="ms-1 text-danger">*</span>
+        <select name="target" class="form-select" @oninput="async e => await OnTargetChangedAsync((string)e.Value!)">
+            @foreach (var projectionType in projectionTypes)
+            {
+                <option value="@projectionType.Name">@projectionType.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="key" class="form-label">Key</label><span class="ms-1 text-danger">*</span>
+        <input name="key" type="text" class="form-control" placeholder="Key" list="@(relationship.Type == ProjectionRelationshipType.OneToMany ? "foreignProperties" : "localPrimitiveProperties")" value="@relationship.Key" @oninput="async e => await OnKeyChangedAsync((string)e.Value!)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="path" class="form-label">Path</label><span class="ms-1 text-danger">*</span>
+        <input name="path" type="text" class="form-control" placeholder="Path" list="@(relationship.Type == ProjectionRelationshipType.OneToMany ? "localArrayProperties" : "localObjectProperties")" value="@relationship.Path" @oninput="async e => await OnPathChangedAsync((string)e.Value!)" />
+    </div>
+
+    <datalist id="localPrimitiveProperties">
+        @foreach(var property in localPrimitiveProperties)
+        {
+            <option value="@property">@property</option>
+        }
+    </datalist>
+    <datalist id="localObjectProperties">
+        @foreach (var property in localObjectProperties)
+        {
+            <option value="@property">@property</option>
+        }
+    </datalist>
+    <datalist id="localArrayProperties">
+        @foreach (var property in localArrayProperties)
+        {
+            <option value="@property">@property</option>
+        }
+    </datalist>
+    <datalist id="foreignProperties">
+        @foreach (var property in foreignProperties)
+        {
+            <option value="@property">@property</option>
+        }
+    </datalist>
+
+</div>
 
 @if (validationErrors.Count > 0)
 {
@@ -17,8 +75,17 @@
 </div>
 
 @code {
+    JsonSchema? schema;
     ProjectionRelationshipDefinition relationship = new();
+    List<ProjectionType> projectionTypes = [];
+    ProjectionType? targetProjectionType;
+    List<string> localPrimitiveProperties = [];
+    List<string> localObjectProperties = [];
+    List<string> localArrayProperties = [];
+    List<string> foreignProperties = [];
     List<string> validationErrors = [];
+
+    [Parameter] public JsonSchema? Schema { get; set; }
 
     [Parameter] public ProjectionRelationshipDefinition Relationship { get; set; } = new();
 
@@ -28,16 +95,81 @@
 
     [Parameter] public EventCallback<ProjectionRelationshipDefinition> OnCreate { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        projectionTypes = (await ApiClient.ProjectionTypes.ListAsync()).Items.OrderBy(t => t.Name).ToList();
+        targetProjectionType = projectionTypes.FirstOrDefault();
+        relationship.Type = ProjectionRelationshipType.OneToOne;
+        relationship.Target = targetProjectionType?.Name!;
+    }
+
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-        if (relationship != Relationship) relationship = Relationship;
+        if (schema != Schema)
+        {
+            schema = Schema;
+            localPrimitiveProperties = ["_id"];
+            if (schema != null)
+            {
+                localPrimitiveProperties.AddRange(schema.GetPrimitiveProperties());
+                localObjectProperties = schema.GetObjectProperties();
+                localArrayProperties = schema.GetArrayProperties();
+            }
+            StateHasChanged();
+        }
+        if (relationship != Relationship)
+        {
+            relationship = Relationship;
+            relationship.Type = ProjectionRelationshipType.OneToOne;
+            relationship.Target = targetProjectionType?.Name!;
+        }
+    }
+
+    void LoadForeignProperties()
+    {
+        foreignProperties = ["_id"];
+        if (targetProjectionType != null) foreignProperties.AddRange(targetProjectionType.Schema.GetPrimitiveProperties());
+    }
+
+    async Task OnTypeChangedAsync(string type)
+    {
+        relationship.Type = type;
+        relationship.Target = null!;
+        LoadForeignProperties();
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(relationship);
+    }
+
+    async Task OnTargetChangedAsync(string target)
+    {
+        relationship.Target = target;
+        relationship.Key = null!;
+        relationship.Path = null!;
+        targetProjectionType = projectionTypes.FirstOrDefault(t => t.Name == target);
+        LoadForeignProperties();
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(relationship);
+    }
+
+    async Task OnKeyChangedAsync(string key)
+    {
+        relationship.Key = key;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(relationship);
+    }
+
+    async Task OnPathChangedAsync(string path)
+    {
+        relationship.Path = path;
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(relationship);
     }
 
     async Task OnCreateAsync()
     {
         validationErrors.Clear();
-       
+        if (string.IsNullOrWhiteSpace(relationship.Type)) validationErrors.Add("<b>Type</b> must be set");
+        if (string.IsNullOrWhiteSpace(relationship.Target)) validationErrors.Add("<b>Target</b> must be set");
+        if (string.IsNullOrWhiteSpace(relationship.Key)) validationErrors.Add("<b>Key</b> must be set");
+        if (string.IsNullOrWhiteSpace(relationship.Path)) validationErrors.Add("<b>Path</b> must be set");
         if (validationErrors.Count > 0) return;
         if (OnCreate.HasDelegate) await OnCreate.InvokeAsync(relationship);
     }

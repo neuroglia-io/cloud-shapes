@@ -71,7 +71,7 @@ public class ProjectionsController(IMediator mediator)
     public async Task<IActionResult> DeleteProjection(string type, string id, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
-        var result = await mediator.ExecuteAsync(new DeleteProjectionQuery(type, id), cancellationToken).ConfigureAwait(false);
+        var result = await mediator.ExecuteAsync(new DeleteProjectionCommand(type, id), cancellationToken).ConfigureAwait(false);
         return this.Process(result, (int)HttpStatusCode.NoContent);
     }
 

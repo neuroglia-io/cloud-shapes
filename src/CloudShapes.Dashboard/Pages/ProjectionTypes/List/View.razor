@@ -115,7 +115,7 @@ else
                                         foreach(var relationship in projectionType.Relationships)
                                         {
                                             <div>
-                                                <a href="/projections/types/@relationship.Target">@(relationship.Type == ProjectionRelationshipType.OneToOne ? relationship.Target : Pluralize.Pluralize(relationship.Target))</a>
+                                                <a href="#">@(relationship.Type == ProjectionRelationshipType.OneToOne ? relationship.Target : Pluralize.Pluralize(relationship.Target))</a>
                                             </div>
                                         }
                                     }
@@ -191,8 +191,8 @@ else
             new ConfirmDialogOptions()
             {
                 YesButtonColor = ButtonColor.Danger,
-                YesButtonText = "Delete",
-                NoButtonText = "Abort",
+                YesButtonText = "Yes",
+                NoButtonText = "No",
                 IsVerticallyCentered = true
             }
         );
