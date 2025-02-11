@@ -9,6 +9,7 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY readme.md /src/readme.md
 COPY ["src/CloudShapes.Api/CloudShapes.Api.csproj", "src/CloudShapes.Api/"]
 COPY ["src/CloudShapes.Application/CloudShapes.Application.csproj", "src/CloudShapes.Application/"]
 COPY ["src/CloudShapes.Data/CloudShapes.Data.csproj", "src/CloudShapes.Data/"]
