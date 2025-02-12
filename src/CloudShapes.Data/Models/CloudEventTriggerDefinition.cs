@@ -23,6 +23,6 @@ public abstract record CloudEventTriggerDefinition
     /// Gets/sets an object used to configure triggering CloudEvents
     /// </summary>
     [YamlMember(Alias = "event")]
-    public virtual CloudEventFilterDefinition Event { get; set; } = null!;
+    public virtual CloudEventFilterDefinition Event { get; set; } = new();
 
 }

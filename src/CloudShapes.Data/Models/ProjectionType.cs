@@ -86,7 +86,7 @@ public record ProjectionType
     /// Gets/sets a list containing the triggers responsible for creating new projections when specific CloudEvents occur
     /// </summary>
     [YamlMember(Alias = "triggers")]
-    public virtual ProjectionTriggerCollection Triggers { get; set; } = null!;
+    public virtual ProjectionTriggerCollection Triggers { get; set; } = new();
 
     /// <summary>
     /// Gets/sets a list containing the indexes, if any, of projections of this type

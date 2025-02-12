@@ -55,6 +55,6 @@ public record CloudEventFilterDefinition
     /// Gets/sets an object used to configure how to resolve the correlation id of filtered CloudEvents
     /// </summary>
     [YamlMember(Alias = "correlation")]
-    public virtual CloudEventCorrelationDefinition Correlation { get; set; } = null!;
+    public virtual CloudEventCorrelationDefinition Correlation { get; set; } = new();
 
 }
