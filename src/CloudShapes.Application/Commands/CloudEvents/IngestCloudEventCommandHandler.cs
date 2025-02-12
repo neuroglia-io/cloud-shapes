@@ -68,11 +68,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
     protected IEnumerable<IPatchHandler> PatchHandlers { get; } = patchHandlers;
 
     /// <summary>
-    /// Gets the service used to validate schemas
-    /// </summary>
-    protected ISchemaValidator SchemaValidator { get; } = schemaValidator;
-
-    /// <summary>
     /// Gets the service used to serialize/deserialize data to/from JSON
     /// </summary>
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
@@ -134,8 +129,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         var projection = (await ExpressionEvaluator.EvaluateAsync(trigger.State, e, cancellationToken: cancellationToken).ConfigureAwait(false))!;
-        var validationResult = await SchemaValidator.ValidateAsync(projection, projectionType.Schema, cancellationToken).ConfigureAwait(false);
-        if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
         var document = BsonDocument.Create(projection);
         document["_id"] = correlationId;
         await DbContext.Set(projectionType).AddAsync(document, cancellationToken).ConfigureAwait(false);
@@ -167,8 +160,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
                 var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(trigger.Patch.Type)) ?? throw new NullReferenceException($"Failed to find an handler for the specified patch type '{trigger.Patch.Type}'");
                 var toPatch = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
                 var patched = patchHandler.ApplyPatchAsync(trigger.Patch.Document, toPatch, cancellationToken).ConfigureAwait(false);
-                var validationResult = await SchemaValidator.ValidateAsync(patched, projectionType.Schema, cancellationToken).ConfigureAwait(false);
-                if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
                 projection = BsonDocument.Create(patched);
                 break;
             case ProjectionUpdateStrategy.Replace:
@@ -180,8 +171,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
                 object updated;
                 if (trigger.State is string expression) updated = (await ExpressionEvaluator.EvaluateAsync(expression, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
                 else updated = (await ExpressionEvaluator.EvaluateAsync(trigger.State!, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
-                validationResult = await SchemaValidator.ValidateAsync(updated, projectionType.Schema, cancellationToken).ConfigureAwait(false);
-                if (!validationResult.IsSuccess()) throw new Exception($"Failed to validate the projection of type '{projectionType.Name}':{Environment.NewLine}{string.Join(Environment.NewLine, validationResult.Errors!)}");
                 projection = BsonDocument.Create(updated);
                 projection["_id"] = correlationId;
                 projection[DocumentMetadata.PropertyName] = metadata;
@@ -208,7 +197,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         await DbContext.Set(projectionType).DeleteAsync(correlationId, cancellationToken).ConfigureAwait(false);
-        //todo: cascading delete
     }
 
 }

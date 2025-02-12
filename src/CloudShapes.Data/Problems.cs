@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System.Net;
-
 namespace CloudShapes.Data;
 
 /// <summary>
@@ -44,6 +42,10 @@ public static class Problems
         /// Gets the uri that describes the type of problems that occur when Cloud Shapes failed to find the specified entity
         /// </summary>
         public static readonly Uri NotFound = new(BaseUri, "/not-found");
+        /// <summary>
+        /// Gets the uri that describes the type of problems that occur when Cloud Shapes failed to validate data
+        /// </summary>
+        public static readonly Uri ValidationFailed = new(BaseUri, "/validation-failed");
 
         /// <summary>
         /// Gets an <see cref="IEnumerable{T}"/> that contains all Cloud Shapes problem types
@@ -54,6 +56,7 @@ public static class Problems
             yield return IndexCreationFailed;
             yield return KeyAlreadyExists;
             yield return NotFound;
+            yield return ValidationFailed;
         }
 
     }
@@ -76,6 +79,10 @@ public static class Problems
         /// Gets the title of the problem that occurs when Cloud Shapes failed to find the specified entity
         /// </summary>
         public const string NotFound = "Not Found";
+        /// <summary>
+        /// Gets the title of the problem that occurs when Cloud Shapes failed to validate data
+        /// </summary>
+        public const string ValidationFailed = "Validation Failed";
 
         /// <summary>
         /// Gets an <see cref="IEnumerable{T}"/> that contains all Cloud Shapes problem titles
@@ -86,6 +93,7 @@ public static class Problems
             yield return IndexCreationFailed;
             yield return KeyAlreadyExists;
             yield return NotFound;
+            yield return ValidationFailed;
         }
 
     }
@@ -104,6 +112,10 @@ public static class Problems
         /// Gets the status for problems that describe an unprocessable operation
         /// </summary>
         public const int Unprocessable = (int)HttpStatusCode.UnprocessableContent;
+        /// <summary>
+        /// Gets the status for problems that describe validation failures
+        /// </summary>
+        public const int ValidationFailed = (int)HttpStatusCode.UnprocessableContent;
 
         /// <summary>
         /// Gets an <see cref="IEnumerable{T}"/> that contains all Cloud Shapes problem statuses
@@ -113,7 +125,21 @@ public static class Problems
         {
             yield return NotFound;
             yield return Unprocessable;
+            yield return ValidationFailed;
         }
+
+    }
+
+    /// <summary>
+    /// Exposes constants about Cloud Shapes related problem details
+    /// </summary>
+    public static class Details
+    {
+
+        /// <summary>
+        /// Gets the details template of a problem due to a projection validation failure
+        /// </summary>
+        public const string ProjectionValidationFailed = "Failed to validate a projection of type '{type}':\r\n{errors}";
 
     }
 
