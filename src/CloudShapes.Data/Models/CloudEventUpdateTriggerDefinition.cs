@@ -25,6 +25,7 @@ public record CloudEventUpdateTriggerDefinition
     /// Required if strategy is set to <see cref="ProjectionUpdateStrategy.Replace"/>, otherwise ignored<para></para>
     /// Supports runtime expressions
     /// </summary>
+    [YamlMember(Alias = "state")]
     public virtual object? State { get; set; }
 
     /// <summary>
@@ -32,12 +33,13 @@ public record CloudEventUpdateTriggerDefinition
     /// Required if strategy is set to <see cref="ProjectionUpdateStrategy.Patch"/>, otherwise ignored<para></para>
     /// Supports runtime expressions
     /// </summary>
+    [YamlMember(Alias = "patch")]
     public virtual Patch? Patch { get; set; }
 
     /// <summary>
     /// Gets the update strategy to use
     /// </summary>
-    [JsonIgnore]
+    [JsonIgnore, YamlIgnore]
     public virtual string Strategy => this.State == null ? this.Patch == null ? throw new Exception("Either 'state' or 'patch' must be configured") : ProjectionUpdateStrategy.Patch : ProjectionUpdateStrategy.Replace;
 
     /// <summary>

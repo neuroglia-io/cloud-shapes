@@ -42,6 +42,7 @@ builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClie
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<ProjectionType>($"{nameof(ProjectionType)}s"));
 builder.Services.AddSingleton<IPluralize>(provider => new Pluralizer());
 builder.Services.AddSerialization();
+builder.Services.AddYamlDotNetSerializer();
 builder.Services.AddJQExpressionEvaluator();
 builder.Services.AddCloudEventBus();
 builder.Services.AddSingleton<ICloudEventCorrelationKeyResolver, CloudEventCorrelationKeyResolver>();
@@ -51,6 +52,7 @@ builder.Services.AddSingleton<IPatchHandler, JsonPatchHandler>();
 builder.Services.AddSingleton<IPatchHandler, JsonStrategicMergePatchHandler>();
 builder.Services.AddSingleton<ISchemaValidator, SchemaValidator>();
 builder.Services.AddSingleton<IDbContext, DbContext>();
+builder.Services.AddHostedService<DatabaseProvisioner>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

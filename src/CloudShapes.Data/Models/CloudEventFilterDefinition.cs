@@ -42,16 +42,19 @@ public record CloudEventFilterDefinition
     /// <summary>
     /// Gets/sets the source uri of filtered CloudEvents. Supports Regular Expressions.
     /// </summary>
+    [YamlMember(Alias = "source")]
     public virtual string? Source { get; set; }
 
     /// <summary>
     /// Gets/sets the type of filtered CloudEvents. Supports Regular Expressions.
     /// </summary>
+    [YamlMember(Alias = "type")]
     public virtual string Type { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets an object used to configure how to resolve the correlation id of filtered CloudEvents
     /// </summary>
+    [YamlMember(Alias = "correlation")]
     public virtual CloudEventCorrelationDefinition Correlation { get; set; } = new();
 
 }

@@ -27,16 +27,19 @@ public record DocumentMetadata
     /// <summary>
     /// Gets/sets the date and time the document was created at
     /// </summary>
+    [YamlMember(Alias = "createdAt")]
     public virtual DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
 
     /// <summary>
     /// Gets/sets the date and time the document was last modified at
     /// </summary>
+    [YamlMember(Alias = "lastModified")]
     public virtual DateTimeOffset LastModified { get; set; } = DateTimeOffset.Now;
 
     /// <summary>
     /// Gets/sets the document's version number
     /// </summary>
+    [YamlMember(Alias = "version")]
     public virtual int Version { get; set; } = 1;
 
     /// <summary>

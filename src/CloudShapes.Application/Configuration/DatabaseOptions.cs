@@ -29,4 +29,9 @@ public class DatabaseOptions
     /// </summary>
     public virtual string Name { get; set; } = "cloud-shapes";
 
+    /// <summary>
+    /// Gets/sets the options used to configure the provisioning, if any, of Cloud Shapes database
+    /// </summary>
+    public virtual DatabaseProvisioningOptions Provisioning { get; set; } = new();
+
 }

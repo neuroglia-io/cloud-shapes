@@ -22,23 +22,25 @@ public record JsonPatchOperation
     /// <summary>
     /// Gets/sets the path, if any, to copy from for the Move/Copy operation
     /// </summary>
+    [YamlMember(Alias = "from")]
     public virtual string? From { get; set; }
 
     /// <summary>
     /// Gets/sets the type of operation to perform
     /// </summary>
-    [Required]
+    [Required, YamlMember(Alias = "op")]
     public virtual string Op { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets the path of the property to patch
     /// </summary>
-    [Required]
+    [Required, YamlMember(Alias = "path")]
     public virtual string Path { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets the patched value
     /// </summary>
-    public virtual JsonElement? Value { get; set; }
+    [YamlMember(Alias = "value")]
+    public virtual object? Value { get; set; }
 
 }

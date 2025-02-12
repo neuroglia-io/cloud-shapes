@@ -22,22 +22,26 @@ public record ProjectionRelationshipDefinition
     /// <summary>
     /// Gets/sets the relationship type
     /// </summary>
+    [YamlMember(Alias = "type")]
     public virtual string Type { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets the name of the related projection type
     /// </summary>
+    [YamlMember(Alias = "target")]
     public virtual string Target { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets the relationship's foreign key
     /// </summary>
+    [YamlMember(Alias = "key")]
     public virtual string Key { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets the path to the relationship's navigation property<para></para>
     /// It can be the same than <see cref="Key"/>, in which case it replaces the key property with the related projection's state
     /// </summary>
+    [YamlMember(Alias = "path")]
     public virtual string Path { get; set; } = null!;
 
     /// <summary>

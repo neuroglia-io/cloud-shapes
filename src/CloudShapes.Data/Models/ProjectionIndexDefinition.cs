@@ -22,26 +22,31 @@ public record ProjectionIndexDefinition
     /// <summary>
     /// Gets/sets the index's name
     /// </summary>
+    [YamlMember(Alias = "name")]
     public virtual string Name { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets a list containing the properties on which the index is defined
     /// </summary>
+    [YamlMember(Alias = "properties")]
     public virtual EquatableList<string> Properties { get; set; } = [];
 
     /// <summary>
     /// Gets/sets a boolean that defines whether or not the index is unique
     /// </summary>
+    [YamlMember(Alias = "unique")]
     public virtual bool Unique { get; set; }
 
     /// <summary>
     /// Gets/sets a boolean that defines whether or not the index is sorted in a descending fashion
     /// </summary>
+    [YamlMember(Alias = "descending")]
     public virtual bool Descending { get; set; }
 
     /// <summary>
     /// Gets/sets a boolean that defines whether or not the index supports full text searches
     /// </summary>
+    [YamlMember(Alias = "text")]
     public virtual bool Text { get; set; }
 
 }

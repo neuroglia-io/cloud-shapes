@@ -34,6 +34,7 @@ public class JsonSchemaBsonSerializer
     /// <inheritdoc/>
     public override JsonSchema Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
+        if (context.Reader.CurrentBsonType == BsonType.Null) return null!;
         var document = BsonDocumentSerializer.Instance.Deserialize(context);
         var json = document.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson });
         return JsonSchema.FromText(json);

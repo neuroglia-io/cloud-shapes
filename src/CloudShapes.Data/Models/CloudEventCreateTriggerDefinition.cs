@@ -24,6 +24,7 @@ public record CloudEventCreateTriggerDefinition
     /// Gets/sets a an object that represents the projection's initial state<para></para>
     /// Supports runtime expressions
     /// </summary>
+    [YamlMember(Alias = "state")]
     public virtual object State { get; set; } = null!;
 
 }

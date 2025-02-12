@@ -23,6 +23,7 @@ public record ProjectionTypeMetadata
     /// <summary>
     /// Gets/sets the total count of projections of this type
     /// </summary>
+    [YamlMember(Alias = "projectionCount")]
     public virtual long ProjectionCount { get; set; }
 
 }

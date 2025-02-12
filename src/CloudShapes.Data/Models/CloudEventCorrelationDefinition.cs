@@ -27,24 +27,27 @@ public record CloudEventCorrelationDefinition
     /// <summary>
     /// Gets/sets the path to the projection's correlation key. Defaults to <see cref="DefaultKey"/>
     /// </summary>
+    [YamlMember(Alias = "key")]
     public virtual string Key { get; set; } = DefaultKey;
 
     /// <summary>
     /// Gets/sets the name of the attribute to extract the value from<para></para>
     /// Required when the strategy is set to <see cref="CloudEventValueResolutionStrategy.Attribute"/>, otherwise ignored
     /// </summary>
+    [YamlMember(Alias = "attribute")]
     public virtual string? Attribute { get; set; }
 
     /// <summary>
     /// Gets/sets a runtime expression used to resolve the value dynamically<para></para>
     /// Required when the strategy is set to <see cref="CloudEventValueResolutionStrategy.Expression"/>, otherwise ignored
     /// </summary>
+    [YamlMember(Alias = "expression")]
     public virtual string? Expression { get; set; }
 
     /// <summary>
     /// Gets the strategy used to extract the value from the CloudEvent
     /// </summary>
-    [JsonIgnore]
+    [JsonIgnore, YamlIgnore]
     public virtual string Strategy => string.IsNullOrWhiteSpace(this.Attribute) ? string.IsNullOrWhiteSpace(this.Expression) ? throw new Exception("Either 'attribute' or 'expression' must be defined") : CloudEventValueResolutionStrategy.Expression : CloudEventValueResolutionStrategy.Attribute;
 
     /// <summary>
