@@ -26,6 +26,7 @@ global using MongoDB.Bson.IO;
 global using MongoDB.Bson.Serialization;
 global using MongoDB.Driver;
 global using Neuroglia;
+global using Neuroglia.Data;
 global using Neuroglia.Data.Expressions;
 global using Neuroglia.Data.Expressions.Services;
 global using Neuroglia.Data.PatchModel.Services;

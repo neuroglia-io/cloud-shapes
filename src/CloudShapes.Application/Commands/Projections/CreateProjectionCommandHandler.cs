@@ -44,19 +44,12 @@ public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     public virtual async Task<IOperationResult<object>> HandleAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, $"Failed to find a projection type with the specified name '{command.Type}'"));
+            ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
         var set = DbContext.Set(type);
         var json = JsonSerializer.SerializeToText(command.State);
         var document = BsonDocument.Parse(json);
         document["_id"] = command.Id;
-        try
-        {
-            await set.AddAsync(document, cancellationToken).ConfigureAwait(false);
-        }
-        catch (MongoWriteException ex) when(ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, $"A projection of type '{command.Type}' with the specified id '{command.Id}' already exists"));
-        }
+        await set.AddAsync(document, cancellationToken).ConfigureAwait(false);
         return this.Ok(BsonTypeMapper.MapToDotNetValue(document));
     }
 
