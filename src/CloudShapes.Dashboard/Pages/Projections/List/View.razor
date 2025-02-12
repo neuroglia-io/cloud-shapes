@@ -38,9 +38,22 @@ else
     }
     else
     {
-        <div class="d-flex">
-            <Sidebar @ref="sidebar" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+        <div class="d-flex flex-grow">
+            <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
             <div class="w-100 p-3">
+                <div class="projection-info pb-3">
+                    <div class="d-flex gap-3 align-items-center">
+                    <h1>@Pluralize.Pluralize(projectionType.Name)</h1>
+                    @if (!string.IsNullOrEmpty(projectionType.Description))
+                    {
+                            <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" @onclick="async () => { await descriptionModal!.ShowAsync(); }" Class="cursor-pointer" />
+                    }
+                    </div>
+                    @if (!string.IsNullOrEmpty(projectionType.Summary)) 
+                    {
+                        <Markdown>@projectionType.Summary</Markdown>
+                    }
+                </div>
                 <div class="d-flex align-baseline">
                     <input type="search" class="form-control rounded my-2 me-2" placeholder="Search" value="@queryOptions?.Search" @oninput="e => Store.SetSearchTerm(e.Value?.ToString())" />
                     <div class="align-baseline my-auto">
@@ -114,8 +127,19 @@ else
 <ConfirmDialog @ref="dialog" />
 <Modal @ref="modal" Size="ModalSize.Large" IsVerticallyCentered="true" />
 
+<Modal @ref="descriptionModal" Size="ModalSize.Large" IsVerticallyCentered="true">
+    <HeaderTemplate>
+        @(projectionType.Name) - Description
+    </HeaderTemplate>
+    <BodyTemplate>
+        <Markdown>@projectionType!.Description</Markdown>
+    </BodyTemplate>
+</Modal>
+
 @code {
     Sidebar? sidebar;
+    Collapse? descriptionCollapse;
+    Modal? descriptionModal;
     Offcanvas? offcanvas;
     ConfirmDialog? dialog;
     Virtualize<IDictionary<string, object>>? virtualize;
