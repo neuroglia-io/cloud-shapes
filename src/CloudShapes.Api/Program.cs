@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using MongoDB.Bson;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -44,6 +42,7 @@ builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClie
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<ProjectionType>($"{nameof(ProjectionType)}s"));
 builder.Services.AddSingleton<IPluralize>(provider => new Pluralizer());
 builder.Services.AddSerialization();
+builder.Services.AddYamlDotNetSerializer();
 builder.Services.AddJQExpressionEvaluator();
 builder.Services.AddCloudEventBus();
 builder.Services.AddSingleton<ICloudEventCorrelationKeyResolver, CloudEventCorrelationKeyResolver>();

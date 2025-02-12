@@ -42,16 +42,19 @@ public record ProjectionTriggerCollection
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for creating new projections when specific CloudEvents occur
     /// </summary>
+    [YamlMember(Alias = "create")]
     public virtual EquatableList<CloudEventCreateTriggerDefinition> Create { get; set; } = null!;
 
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for updating projections when specific CloudEvents occur
     /// </summary>
+    [YamlMember(Alias = "update")]
     public virtual EquatableList<CloudEventUpdateTriggerDefinition>? Update { get; set; }
 
     /// <summary>
     /// Gets/sets a list containing the triggers responsible for deleting projections when specific CloudEvents occur
     /// </summary>
+    [YamlMember(Alias = "delete")]
     public virtual EquatableList<CloudEventDeleteTriggerDefinition>? Delete { get; set; }
 
     /// <summary>
