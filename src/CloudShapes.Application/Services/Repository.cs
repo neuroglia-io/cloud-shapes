@@ -11,9 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Data.Models;
-using Neuroglia.Data;
-
 namespace CloudShapes.Application.Services;
 
 /// <summary>
@@ -24,13 +21,15 @@ namespace CloudShapes.Application.Services;
 /// <param name="database">The current <see cref="IMongoDatabase"/></param>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
 /// <param name="projections">The <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/></param>
-/// <param name="schemaValidator">The service used to validate schemas</param>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
+/// <param name="schemaValidator">The service used to validate schemas</param>
+/// <param name="expressionEvaluator">An <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s</param>
+/// <param name="patchHandlers">The service used to evaluate runtime expressions</param>
 /// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 /// <param name="type">The type of projections managed by the <see cref="IRepository"/></param>
-public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, 
-    IMongoCollection<BsonDocument> projections, ISchemaValidator schemaValidator, IDbContext dbContext, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
+public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IMongoCollection<BsonDocument> projections, 
+    IDbContext dbContext, ISchemaValidator schemaValidator, IEnumerable<IPatchHandler> patchHandlers, IExpressionEvaluator expressionEvaluator, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
     : IRepository
 {
 
@@ -68,6 +67,16 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     /// Gets the service used to validate schemas
     /// </summary>
     protected ISchemaValidator SchemaValidator { get; } = schemaValidator;
+
+    /// <summary>
+    /// Gets an <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s
+    /// </summary>
+    protected IEnumerable<IPatchHandler> PatchHandlers { get; } = patchHandlers;
+
+    /// <summary>
+    /// Gets the service used to evaluate runtime expressions
+    /// </summary>
+    protected IExpressionEvaluator ExpressionEvaluator { get; } = expressionEvaluator;
 
     /// <summary>
     /// Gets the service used to observe both inbound and outbound <see cref="CloudEvent"/>s
@@ -114,7 +123,7 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     }
 
     /// <inheritdoc/>
-    public virtual async Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
+    public virtual async Task<BsonDocument> AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
         var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
@@ -135,7 +144,14 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
                 projection.Replace(path, target);
             }
         }
-        await Projections.InsertOneAsync(projection, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await Projections.InsertOneAsync(projection, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.ProjectionKeyAlreadyExists, Type.Name, projectionId)));
+        }
         CloudEventBus.OutputStream.OnNext(new CloudEvent()
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -172,10 +188,11 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
                 await relatedProjections.UpdateAsync(relatedProjection, cancellationToken).ConfigureAwait(false);
             }
         }
+        return projection;
     }
 
     /// <inheritdoc/>
-    public virtual async Task UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default)
+    public virtual async Task<BsonDocument> UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
         var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
@@ -195,7 +212,7 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
             DataContentType = MediaTypeNames.Application.Json,
             Data = new ProjectionUpdatedEvent(projectionId.ToString()!, Type.Name, projection.GetState(JsonSerializer))
         });
-        if (result.MatchedCount < 1) return;
+        if (result.MatchedCount < 1) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionNotFound, Type.Name, projectionId.ToString()!)));
         var relatedProjectionTypesFilterBuilder = Builders<ProjectionType>.Filter;
         var relatedProjectionTypesFilter = relatedProjectionTypesFilterBuilder.ElemMatch(nameof(ProjectionType.Relationships).ToCamelCase(), relatedProjectionTypesFilterBuilder.Eq(nameof(ProjectionRelationshipDefinition.Target).ToCamelCase(), Type.Name));
         var relatedProjectionTypes = await (await ProjectionTypes.FindAsync(relatedProjectionTypesFilter, new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -233,6 +250,34 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
                 }
             }
         }
+        return projection;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<BsonDocument> PatchAsync(string id, Patch patch, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(patch);
+        var projection = await GetAsync(id, cancellationToken).ConfigureAwait(false) ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionNotFound, Type.Name, id)));
+        return await PatchAsync(projection, patch, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<BsonDocument> PatchAsync(BsonDocument projection, Patch patch, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        ArgumentNullException.ThrowIfNull(patch);
+        var projectionState = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
+        var arguments = new Dictionary<string, object>()
+        {
+            { RuntimeExpressions.Arguments.State, projectionState }
+        };
+        var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(patch.Type)) ?? throw new ProblemDetailsException(new(Problems.Types.UnsupportedPatchType, Problems.Titles.UnsupportedPatchType, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.UnsupportedPatchType, patch.Type)));
+        var patchDocument = await ExpressionEvaluator.EvaluateAsync(patch.Document, new { }, arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
+        projectionState = patchHandler.ApplyPatchAsync(patch.Document, projectionState, cancellationToken).ConfigureAwait(false);
+        var validationResult = await SchemaValidator.ValidateAsync(projectionState, Type.Schema, cancellationToken).ConfigureAwait(false);
+        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
+        return BsonDocument.Create(projectionState);
     }
 
     /// <inheritdoc/>

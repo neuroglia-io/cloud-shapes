@@ -24,11 +24,9 @@ namespace CloudShapes.Application.Commands.CloudEvents;
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="expressionEvaluator">The service used to evaluate runtime expressions</param>
 /// <param name="cloudEventValueResolver">The service used to resolve values from <see cref="CloudEvent"/>s</param>
-/// <param name="patchHandlers">An <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
-/// <param name="schemaValidator">The service used to validate schemas</param>
 public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandler> logger, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, 
-    IExpressionEvaluator expressionEvaluator, ICloudEventCorrelationKeyResolver cloudEventValueResolver, IEnumerable<IPatchHandler> patchHandlers, ISchemaValidator schemaValidator, IJsonSerializer jsonSerializer)
+    IExpressionEvaluator expressionEvaluator, ICloudEventCorrelationKeyResolver cloudEventValueResolver, IJsonSerializer jsonSerializer)
     : ICommandHandler<IngestCloudEventCommand>
 {
 
@@ -61,11 +59,6 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
     /// Gets the service used to resolve values from <see cref="CloudEvent"/>s
     /// </summary>
     protected ICloudEventCorrelationKeyResolver CloudEventValueResolver { get; } = cloudEventValueResolver;
-
-    /// <summary>
-    /// Gets an <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s
-    /// </summary>
-    protected IEnumerable<IPatchHandler> PatchHandlers { get; } = patchHandlers;
 
     /// <summary>
     /// Gets the service used to serialize/deserialize data to/from JSON
@@ -150,19 +143,16 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         var projections = DbContext.Set(projectionType);
-        var projection = await projections.GetAsync(correlationId, cancellationToken).ConfigureAwait(false);
-        if (projection == null) return;
-        var metadata = projection[DocumentMetadata.PropertyName];
         switch (trigger.Strategy)
         {
             case ProjectionUpdateStrategy.Patch:
                 if (trigger.Patch == null) throw new NullReferenceException("The 'patch' property must be configured");
-                var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(trigger.Patch.Type)) ?? throw new NullReferenceException($"Failed to find an handler for the specified patch type '{trigger.Patch.Type}'");
-                var toPatch = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
-                var patched = patchHandler.ApplyPatchAsync(trigger.Patch.Document, toPatch, cancellationToken).ConfigureAwait(false);
-                projection = BsonDocument.Create(patched);
+                await projections.PatchAsync(correlationId,trigger.Patch, cancellationToken).ConfigureAwait(false);
                 break;
             case ProjectionUpdateStrategy.Replace:
+                var projection = await projections.GetAsync(correlationId, cancellationToken).ConfigureAwait(false);
+                if (projection == null) return;
+                var metadata = projection[DocumentMetadata.PropertyName];
                 var toUpdate = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
                 var arguments = new Dictionary<string, object>()
                 {
@@ -174,11 +164,12 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
                 projection = BsonDocument.Create(updated);
                 projection["_id"] = correlationId;
                 projection[DocumentMetadata.PropertyName] = metadata;
+                await projections.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
                 break;
             default:
                 throw new NotSupportedException($"The specified update strategy '{trigger.Strategy}' is not supported");
         }
-        await projections.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
+        
     }
 
     /// <summary>

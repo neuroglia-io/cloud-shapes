@@ -53,16 +53,34 @@ public interface IRepository
     /// </summary>
     /// <param name="projection">The projection to add</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
-    /// <returns>A new awaitable <see cref="Task"/></returns>
-    Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default);
+    /// <returns>The newly added <see cref="BsonDocument"/></returns>
+    Task<BsonDocument> AddAsync(BsonDocument projection, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates the specified projection
     /// </summary>
     /// <param name="projection">The updated projection</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
-    /// <returns>A new awaitable <see cref="Task"/></returns>
-    Task UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default);
+    /// <returns>The updated <see cref="BsonDocument"/></returns>
+    Task<BsonDocument> UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Patches the specified projection
+    /// </summary>
+    /// <param name="id">The id of the projection to patch</param>
+    /// <param name="patch">The patch to apply</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The patched projection</returns>
+    Task<BsonDocument> PatchAsync(string id, Patch patch, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Patches the specified projection
+    /// </summary>
+    /// <param name="projection">The projection to patch</param>
+    /// <param name="patch">The patch to apply</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The patched projection</returns>
+    Task<BsonDocument> PatchAsync(BsonDocument projection, Patch patch, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the specified projection
