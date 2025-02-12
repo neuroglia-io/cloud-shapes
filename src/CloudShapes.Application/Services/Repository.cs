@@ -11,6 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using CloudShapes.Data.Models;
+using Neuroglia.Data;
+
 namespace CloudShapes.Application.Services;
 
 /// <summary>
@@ -21,12 +24,13 @@ namespace CloudShapes.Application.Services;
 /// <param name="database">The current <see cref="IMongoDatabase"/></param>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
 /// <param name="projections">The <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/></param>
+/// <param name="schemaValidator">The service used to validate schemas</param>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 /// <param name="type">The type of projections managed by the <see cref="IRepository"/></param>
 public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, 
-    IMongoCollection<BsonDocument> projections, IDbContext dbContext, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
+    IMongoCollection<BsonDocument> projections, ISchemaValidator schemaValidator, IDbContext dbContext, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
     : IRepository
 {
 
@@ -59,6 +63,11 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     /// Gets the current <see cref="IDbContext"/>
     /// </summary>
     protected IDbContext DbContext { get; } = dbContext;
+
+    /// <summary>
+    /// Gets the service used to validate schemas
+    /// </summary>
+    protected ISchemaValidator SchemaValidator { get; } = schemaValidator;
 
     /// <summary>
     /// Gets the service used to observe both inbound and outbound <see cref="CloudEvent"/>s
@@ -108,6 +117,8 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     public virtual async Task AddAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
+        var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
+        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
         var projectionId = projection["_id"].ToString()!;
         projection = projection.InsertMetadata(new DocumentMetadata());
         if (Type.Relationships != null)
@@ -167,6 +178,8 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     public virtual async Task UpdateAsync(BsonDocument projection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projection);
+        var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
+        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
         var metadata = BsonSerializer.Deserialize<DocumentMetadata>(projection[DocumentMetadata.PropertyName].AsBsonDocument);
         metadata.Update();
         projection = projection.InsertMetadata(metadata);

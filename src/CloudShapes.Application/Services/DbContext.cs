@@ -18,7 +18,7 @@ namespace CloudShapes.Application.Services;
 /// </summary>
 /// <param name="serviceProvider">The current <see cref="IServiceProvider"/></param>
 /// <param name="database">The current <see cref="IMongoDatabase"/></param>
-/// ^<param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to manage <see cref="ProjectionType"/>s</param>
+/// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to manage <see cref="ProjectionType"/>s</param>
 /// <param name="pluralize">The service used to pluralize terms</param>
 public class DbContext(IServiceProvider serviceProvider, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IPluralize pluralize)
     : IDbContext
