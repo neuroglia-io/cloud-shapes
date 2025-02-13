@@ -18,6 +18,7 @@
 @inherits StatefulComponent<ProjectionTypeListStore, ProjectionTypeListState>
 @inject IPluralize Pluralize
 @inject NavigationManager Navigation
+@inject JSInterop JSInterop
 
 <ApplicationTitle>Projection Types</ApplicationTitle>
 
@@ -40,6 +41,16 @@ else
     }
     else
     {
+        <div class="d-flex align-baseline px-3">
+            <input type="search" class="form-control rounded my-2 me-2" placeholder="Search" value="@queryOptions?.Search" @oninput="e => Store.SetSearchTerm(e.Value?.ToString())" />
+            <div class="dropdown d-flex align-content-center">
+                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item @(selectedProjectionTypes.Count == 0 ? "text-mute" : "text-danger")" href="#" @onclick="async _ => await (selectedProjectionTypes.Count == 0 ?  Task.CompletedTask : OnDeleteSelectedProjectionTypesAsync())" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete selected</a></li>
+                </ul>
+            </div>
+        </div>
+        <Pager Class="px-3" TotalLength="projectionTypes?.TotalCount ?? 0" OnPaged="OnPageChanged" PageIndex="(queryOptions?.Skip/(queryOptions?.Limit??1)) ?? 0" PageSize="queryOptions?.Limit ?? 50" />
         <div class="table-container">
             <table class="table table-striped table-hover">
                 <thead>
@@ -56,10 +67,13 @@ else
                         <th class="sticky-header text-center">Relationships</th>
                         <th class="sticky-header text-center">Projections</th>
                         <th class="fit"></th>
+                        <th class="sticky-header text-center fit">
+                            <input @ref="selectAllCheckbox" type="checkbox" @onclick="(_) => Store.ToggleProjectionTypeSelection()" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
-                    <Virtualize @ref="virtualize" Context="projectionType" ItemsProvider="@Store.ProvideProjectionTypesAsync" ItemSize="61">
+                    <Virtualize @ref="Store.Virtualize" Context="projectionType" ItemsProvider="@Store.ProvideProjectionTypesAsync" ItemSize="61">
                         <ItemContent>
                             <tr class="cursor-pointer">
                                 <td>@projectionType.Name</td>
@@ -143,6 +157,9 @@ else
                                         <li><a class="dropdown-item text-danger" href="#" @onclick="async _ => await OnDeleteProjectionTypeAsync(projectionType)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Delete</a></li>
                                     </ul>
                                 </td>
+                                <td class="text-center align-middle fit">
+                                    <input type="checkbox" checked="@selectedProjectionTypes.Contains(projectionType.Name)" @onclick="(_) => Store.ToggleProjectionTypeSelection(projectionType.Name)" @onclick:preventDefault="true" @onclick:stopPropagation="true" />
+                                </td>
                             </tr>
                         </ItemContent>
                         <Placeholder>
@@ -165,30 +182,40 @@ else
                 </tbody>
             </table>
         </div>
+        <Pager Class="px-3" TotalLength="projectionTypes?.TotalCount ?? 0" OnPaged="OnPageChanged" PageIndex="(queryOptions?.Skip/(queryOptions?.Limit??1)) ?? 0" PageSize="queryOptions?.Limit ?? 50" />
     }
 }
 
 <ConfirmDialog @ref="dialog" />
 
 @code {
-    Virtualize<ProjectionType>? virtualize;
     ConfirmDialog? dialog;
     bool loading = true;
     PagedResult<ProjectionType>? projectionTypes;
+    ElementReference? selectAllCheckbox;
+    EquatableList<string> selectedProjectionTypes = [];
+    QueryOptions? queryOptions;
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), token: CancellationTokenSource.Token);
-        Store.ProjectionTypes.SubscribeAsync(async value =>
+        Store.ProjectionTypes.Subscribe(value => OnStateChanged(_ => projectionTypes = value), CancellationTokenSource.Token);
+        Store.QueryOptions.Subscribe(value => OnStateChanged(_ => queryOptions = value), token: CancellationTokenSource.Token);
+
+        Store.SelectedProjectionTypes.SubscribeAsync(async selectedProjectionTypes =>
         {
-            OnStateChanged(_ => 
+            OnStateChanged(_ =>
             {
-                projectionTypes = value;
+                this.selectedProjectionTypes = selectedProjectionTypes;
             });
-            if (virtualize == null) return;
-            await virtualize.RefreshDataAsync();
+            if (selectAllCheckbox.HasValue)
+            {
+                if (selectedProjectionTypes.Count == 0) await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Unchecked);
+                else if (selectedProjectionTypes.Count == (projectionTypes?.Items.Count() ?? 0)) await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Checked);
+                else await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Indeterminate);
+            }
         }, CancellationTokenSource.Token);
     }
 
@@ -212,7 +239,35 @@ else
             }
         );
         if (!confirmation) return;
-        await this.Store.DeleteProjectionTypeAsync(projectionType);
+        await this.Store.DeleteProjectionTypeAsync(projectionType.Name);
+    }
+
+    async Task OnDeleteSelectedProjectionTypesAsync()
+    {
+        if (dialog == null) return;
+        if (selectedProjectionTypes.Count == 0) return;
+        var confirmation = await dialog.ShowAsync(
+            $"Are you sure you want to delete {selectedProjectionTypes.Count} projection type{(selectedProjectionTypes.Count > 1 ? "s" : "")}?",
+            $"The deletion will be permanent. Are you sure you want to proceed ?",
+            new ConfirmDialogOptions()
+                {
+                    YesButtonColor = ButtonColor.Danger,
+                    YesButtonText = "Yes",
+                    NoButtonText = "No",
+                    IsVerticallyCentered = true
+                }
+        );
+        if (!confirmation) return;
+        await Store.DeleteSelectedProjectionTypesAsync();
+        Store.ToggleProjectionTypeSelection();
+    }
+
+    void OnPageChanged(PageEvent pageEvent)
+    {
+        var skip = pageEvent.PageIndex * pageEvent.PageSize;
+        var limit = pageEvent.PageSize;
+        Store.SetSkip(skip);
+        Store.SetLimit(limit);
     }
 
 }

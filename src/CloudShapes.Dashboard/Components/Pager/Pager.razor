@@ -1,0 +1,117 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Components
+@using CloudShapes.Dashboard.Components.PagerStateManagement
+@inherits StatefulComponent<Pager, PagerStore, PagerState>
+
+<div class="pager d-flex justify-content-between align-items-center gap-3 my-3 @ClassNames">
+    <div class="pager__size d-flex align-items-center gap-3">
+        <label for="items-per-page">Items per page:</label>
+        <select class="form-select w-auto" aria-label="page size selection" @onchange='(e) => Store.SetPageSize(int.Parse((string?)e.Value ?? "50"))'>
+            @foreach (var size in pageSizes)
+            {
+                <option value="@size" selected="@(size == pageSize)">@size</option>
+            })
+        </select>
+    </div>
+    <span>Page @(pageIndex + 1) of @pageCount</span>
+    <nav class="pager__nav navigation">
+        <ul class="pagination mb-0">
+            <li class="page-item"><button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(0)"><Icon Name="IconName.ChevronBarLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" /></button></li>
+            <li class="page-item"><button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(pageIndex - 1)"><Icon Name="IconName.ChevronLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" /></button></li>
+            <li class="page-item"><button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageIndex + 1)"><Icon Name="IconName.ChevronRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" /></button></li>
+            <li class="page-item"><button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageCount - 1)"><Icon Name="IconName.ChevronBarRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" /></button></li>
+        </ul>
+    </nav>
+</div>
+
+@code {
+    readonly int[] pageSizes = new int[] { 10, 25, 50, 100, 250, 500, 1000 };
+    long totalLength = 0;
+    int pageIndex = 0;
+    int previousPageIndex = 0;
+    int pageSize = 50;
+    int previousPageSize = 50;
+    int pageCount = 0;
+    bool isFirstPage = true;
+    bool isLastPage = true;
+
+    protected string? ClassNames => Class;
+    /// <summary>
+    /// Gets/sets the additional css classes
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Gets/sets the the total number of items that are being paginated. Defaulted to 0.
+    /// </summary>
+    [Parameter] public long TotalLength { get; set; } = 0;
+
+    /// <summary>
+    /// Gets/sets the zero-based index of the current page. Defaulted to 0.
+    /// </summary>
+    [Parameter] public int PageIndex { get; set; } = 0;
+
+    /// <summary>
+    /// Gets/sets the number of items per page. Defaulted to 50.
+    /// </summary>
+    [Parameter] public int PageSize { get; set; } = 50;
+
+    /// <summary>
+    /// Gets/sets the event callback triggered when the paging changes.
+    /// </summary>
+    [Parameter] public EventCallback<PageEvent> OnPaged { get; set; }
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Store.TotalLength.Subscribe(value => OnStateChanged(_ => totalLength = value), CancellationTokenSource.Token);
+        Store.PageIndex.Subscribe(value => OnStateChanged(_ => pageIndex = value), CancellationTokenSource.Token);
+        Store.PreviousPageIndex.Subscribe(value => OnStateChanged(_ => previousPageIndex = value), CancellationTokenSource.Token);
+        Store.PageSize.Subscribe(value => OnStateChanged(_ => pageSize = value), CancellationTokenSource.Token);
+        Store.PreviousPageSize.Subscribe(value => OnStateChanged(_ => previousPageSize = value), CancellationTokenSource.Token);
+        Store.PageCount.Subscribe(value => OnStateChanged(_ => pageCount = value), CancellationTokenSource.Token);
+        Store.IsFirstPage.Subscribe(value => OnStateChanged(_ => isFirstPage = value), CancellationTokenSource.Token);
+        Store.IsLastPage.Subscribe(value => OnStateChanged(_ => isLastPage = value), CancellationTokenSource.Token);
+        Observable.CombineLatest(
+            Store.TotalLength,
+            Store.PageIndex,
+            Store.PreviousPageIndex,
+            Store.PageSize,
+            Store.PreviousPageSize,
+            (totalLength, pageIndex, previousPageIndex, pageSize, previousPageSize) => (totalLength, pageIndex, previousPageIndex, pageSize, previousPageSize)
+        )
+        .Throttle(TimeSpan.FromMilliseconds(1))
+        .Where((payload) => {
+            var (totalLength, pageIndex, previousPageIndex, pageSize, previousPageSize) = payload;
+             return OnPaged.HasDelegate && (pageIndex != previousPageIndex || pageSize != previousPageSize);
+        })
+        .SubscribeAsync(async (payload) => {
+            var (totalLength, pageIndex, previousPageIndex, pageSize, previousPageSize) = payload;
+            await OnPaged.InvokeAsync(new PageEvent(pageIndex, pageSize, previousPageIndex));
+        }, CancellationTokenSource.Token);
+    }
+
+    /// <inheritdoc/>
+    protected override void OnParametersSet()
+    {
+        if (TotalLength != totalLength) Store.SetTotalLength(TotalLength);
+        if (PageIndex != pageIndex) Store.SetPageIndex(PageIndex);
+        if (PageSize != pageSize) Store.SetPageSize(PageSize);
+    }
+
+}

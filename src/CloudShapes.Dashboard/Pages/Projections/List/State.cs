@@ -42,9 +42,34 @@ public record ProjectionListState
     public ProjectionType? ProjectionType { get; set; }
 
     /// <summary>
-    /// Gets/sets the options used to query projections
+    /// Gets/sets maximum number of projections to return.
     /// </summary>
-    public QueryOptions QueryOptions { get; set; } = new();
+    public int? Limit { get; set; }
+
+    /// <summary>
+    /// Gets/sets the number of projections to skip, used for pagination.
+    /// </summary>
+    public int? Skip { get; set; }
+
+    /// <summary>
+    /// Gets/sets the term to search for, if any
+    /// </summary>
+    public string? Search { get; set; }
+
+    /// <summary>
+    /// Gets/sets the property to order items by, if any
+    /// </summary>
+    public string? OrderBy { get; set; }
+
+    /// <summary>
+    /// Gets/sets a boolean that defines whether or not to order projections in a descending fashion. Ignored if <see cref="OrderBy"/> has not been set
+    /// </summary>
+    public bool Descending { get; set; } = false;
+
+    /// <summary>
+    /// Gets/sets a dictionary of filters where the key is the field name and the value is the expected value.
+    /// </summary>
+    public virtual EquatableDictionary<string, string>? Filters { get; set; }
 
     /// <summary>
     /// Gets/sets the current page of projections to list, if any
