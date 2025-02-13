@@ -39,9 +39,22 @@ else
     }
     else
     {
-        <div class="d-flex">
-            <Sidebar @ref="sidebar" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+        <div class="d-flex flex-grow">
+            <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
             <div class="w-100 p-3">
+                <div class="projection-info pb-3">
+                    <div class="d-flex gap-3 align-items-center">
+                        <h1>@Pluralize.Pluralize(projectionType.Name)</h1>
+                        @if (!string.IsNullOrEmpty(projectionType.Description))
+                        {
+                            <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" @onclick="async () => { await descriptionModal!.ShowAsync(); }" Class="cursor-pointer" />
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(projectionType.Summary)) 
+                    {
+                        <Markdown>@projectionType.Summary</Markdown>
+                    }
+                </div>
                 <div class="d-flex align-baseline">
                     <input type="search" class="form-control rounded my-2 me-2" placeholder="Search" value="@queryOptions?.Search" @oninput="e => Store.SetSearchTerm(e.Value?.ToString())" />
                     <div class="align-baseline my-auto">
@@ -54,6 +67,7 @@ else
                         </ul>
                     </div>
                 </div>
+                <Pager TotalLength="projections?.Count() ?? 0" OnPaged="OnPageChanged" PageIndex="(queryOptions?.Skip/(queryOptions?.Limit??1)) ?? 0" PageSize="queryOptions?.Limit ?? 50" />
                 <div class="table-container">
                     <table class="table table-striped table-hover">
                         <thead>
@@ -69,7 +83,7 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            <Virtualize @ref="virtualize" Context="projection" ItemsProvider="@Store.ProvideProjectionsAsync" ItemSize="61">
+                            <Virtualize @ref="Store.Virtualize" Context="projection" ItemsProvider="@Store.ProvideProjectionsAsync" ItemSize="61">
                                 <ItemContent>
                                     @{
                                         var projectionId = (string)projection["_id"];
@@ -105,6 +119,7 @@ else
                         </tbody>
                     </table>
                 </div>
+                <Pager TotalLength="projections?.Count() ?? 0" OnPaged="OnPageChanged" PageIndex="(queryOptions?.Skip/(queryOptions?.Limit??1)) ?? 0" PageSize="queryOptions?.Limit ?? 50" />
             </div>
         </div>
     }
@@ -115,11 +130,21 @@ else
 <ConfirmDialog @ref="dialog" />
 <Modal @ref="modal" Size="ModalSize.Large" IsVerticallyCentered="true" />
 
+<Modal @ref="descriptionModal" Size="ModalSize.Large" IsVerticallyCentered="true">
+    <HeaderTemplate>
+        @(projectionType.Name) - Description
+    </HeaderTemplate>
+    <BodyTemplate>
+        <Markdown>@projectionType!.Description</Markdown>
+    </BodyTemplate>
+</Modal>
+
 @code {
     Sidebar? sidebar;
+    Collapse? descriptionCollapse;
+    Modal? descriptionModal;
     Offcanvas? offcanvas;
     ConfirmDialog? dialog;
-    Virtualize<IDictionary<string, object>>? virtualize;
     Modal? modal;
     bool loading = true;
     string? projectionTypeName;
@@ -135,21 +160,14 @@ else
     {
         await base.OnInitializedAsync();
         Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), token: CancellationTokenSource.Token);
+        Store.Projections.Subscribe(value => OnStateChanged(_ => projections = value?.Items), CancellationTokenSource.Token);
         Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), token: CancellationTokenSource.Token);
+        Store.QueryOptions.Subscribe(value => OnStateChanged(_ => queryOptions = value), token: CancellationTokenSource.Token);
         Store.ProjectionTypes.SubscribeAsync(async _ =>
         {
             if (sidebar == null) return;
             await sidebar.RefreshDataAsync();
             OnStateChanged(_ => { });
-        }, CancellationTokenSource.Token);
-        Store.Projections.SubscribeAsync(async projections =>
-        {
-            if (virtualize == null) return;
-            await virtualize.RefreshDataAsync();
-            OnStateChanged(_ => 
-            {
-                this.projections = projections?.Items;
-            });
         }, CancellationTokenSource.Token);
         Store.SelectedProjections.SubscribeAsync(async selectedProjections =>
         {
@@ -164,7 +182,6 @@ else
                 else await JSInterop.SetCheckboxStateAsync(selectAllCheckbox.Value, CloudShapes.Dashboard.CheckboxState.Indeterminate);
             }
         }, CancellationTokenSource.Token);
-        Store.QueryOptions.Subscribe(value => OnStateChanged(_ => queryOptions = value), token: CancellationTokenSource.Token);
         if(!string.IsNullOrWhiteSpace(ProjectionTypeName)) Store.SetProjectionTypeName(ProjectionTypeName);
         if(projectionType != null) Navigation.NavigateTo($"/{Pluralize.Pluralize(projectionType.Name)}", false);
     }
@@ -241,6 +258,7 @@ else
         );
         if (!confirmation) return;
         await Store.DeleteSelectedProjectionsAsync();
+        Store.ToggleProjectionSelection();
     }
 
     Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)
@@ -251,6 +269,14 @@ else
         parameters.Add(nameof(ProjectionDetails.ProjectionType), projectionType!);
         parameters.Add(nameof(ProjectionDetails.Projection), projection);
         return this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: parameters);
+    }
+
+    void OnPageChanged(PageEvent pageEvent)
+    {
+        var skip = pageEvent.PageIndex * pageEvent.PageSize;
+        var limit = pageEvent.PageSize;
+        Store.SetSkip(skip);
+        Store.SetLimit(limit);
     }
 
 }

@@ -126,7 +126,8 @@ h1:focus {
 }
 
 .bb-sidebar-content {
-    height: calc(100vh - calc(100px + 3.5rem)) !important; 
+    height: unset !important;
+    flex-grow: 1;
 }
 
 .monaco-editor-container-large {

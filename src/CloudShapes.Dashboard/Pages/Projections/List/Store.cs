@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Models;
-using Microsoft.AspNetCore.Components.Web.Virtualization;
 
 namespace CloudShapes.Dashboard.Pages.Projections.List;
 
@@ -25,6 +23,15 @@ namespace CloudShapes.Dashboard.Pages.Projections.List;
 public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEventHubClient cloudEventHub, IPluralize pluralize)
     : ComponentStore<ProjectionListState>(new())
 {
+
+
+    bool _disposed;
+    readonly BehaviorSubject<System.Reactive.Unit> _refresh = new(System.Reactive.Unit.Default);
+
+    /// <summary>
+    /// The reference to the component used to virtualize the list of projections
+    /// </summary>
+    public Virtualize<IDictionary<string, object>>? Virtualize { get; set; }
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe the <see cref="CloudEvent"/>s produced by Cloud Shapes
@@ -62,9 +69,57 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     public IObservable<EquatableList<string>> SelectedProjections => this.Select(state => state.SelectedProjections).DistinctUntilChanged();
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.QueryOptions"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Limit"/> changes
     /// </summary>
-    public IObservable<QueryOptions> QueryOptions => this.Select(state => state.QueryOptions).DistinctUntilChanged();
+    public IObservable<int?> Limit => this.Select(state => state.Limit).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Skip"/> changes
+    /// </summary>
+    public IObservable<int?> Skip => this.Select(state => state.Skip).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Search"/> changes
+    /// </summary>
+    public IObservable<string?> Search => this.Select(state => state.Search).Throttle(TimeSpan.FromMilliseconds(300)).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.OrderBy"/> changes
+    /// </summary>
+    public IObservable<string?> OrderBy => this.Select(state => state.OrderBy).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Descending"/> changes
+    /// </summary>
+    public IObservable<bool> Descending => this.Select(state => state.Descending).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Filters"/> changes
+    /// </summary>
+    public IObservable<EquatableDictionary<string, string>?> Filters => this.Select(state => state.Filters).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe a derived <see cref="QueryOptions"/> changes
+    /// </summary>
+    public IObservable<QueryOptions> QueryOptions => Observable.CombineLatest(
+             Limit,
+             Skip,
+             Search,
+             OrderBy,
+             Descending,
+             Filters,
+             (limit, skip, search, orderBy, descending, filters) => new QueryOptions
+             {
+                 Limit = limit,
+                 Skip = skip,
+                 Search = search,
+                 OrderBy = orderBy,
+                 Descending = descending,
+                 Filters = filters?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+             }
+        )
+        .Throttle(TimeSpan.FromMilliseconds(100))
+        .DistinctUntilChanged();
 
     /// <inheritdoc/>
     public override async Task InitializeAsync()
@@ -74,16 +129,25 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         CloudEvents = cloudEventHub.Stream();
         CloudEvents.Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type)).SubscribeAsync(async _ => await ListProjectionTypesAsync(), CancellationTokenSource.Token);
         CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
-        ProjectionTypeName.SubscribeAsync(async typeName =>
+        Observable.CombineLatest(
+            _refresh,
+            ProjectionTypeName,
+            QueryOptions,
+            (_, typeName, queryOptions) => (typeName, queryOptions)
+        )
+            .Where(payload => {
+                var (typeName, _) = payload;
+                return Get().ProjectionTypes.Count >= 1 && Get().ProjectionType?.Name != typeName;
+            })
+            .Select(payload => payload.queryOptions)
+            .SubscribeAsync(async (queryOptions) => await ListProjectionsAsync(queryOptions), CancellationTokenSource.Token);
+        ProjectionTypeName.Subscribe(typeName =>
         {
             var projectionTypes = Get().ProjectionTypes;
             if (Get().ProjectionTypes.Count < 1 || Get().ProjectionType?.Name == typeName) return;
             SetProjectionType();
-            await ListProjectionsAsync();
         }, CancellationTokenSource.Token);
-        QueryOptions.SubscribeAsync(async _ => await ListProjectionsAsync(), CancellationTokenSource.Token);
         await ListProjectionTypesAsync();
-        await ListProjectionsAsync();
         SetLoading(false);
     }
 
@@ -112,29 +176,92 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     }
 
     /// <summary>
-    /// Sets the <see cref="ProjectionListState.QueryOptions"/>
+    /// Sets the <see cref="ProjectionListState.Limit"/>
     /// </summary>
-    /// <param name="options">The <see cref="QueryOptions"/> to use</param>
-    public void SetQueryOptions(QueryOptions options)
+    /// <param name="limit">The new value</param>
+    public void SetLimit(int? limit)
     {
         Reduce(state => state with
         {
-            QueryOptions = options
+            Limit = limit
         });
     }
 
     /// <summary>
-    /// Sets the <see cref="ProjectionListState.QueryOptions"/>'s <see cref="QueryOptions.Search"/>
+    /// Sets the <see cref="ProjectionListState.Skip"/>
     /// </summary>
-    /// <param name="term">The <see cref="ProjectionListState.QueryOptions"/>'s <see cref="QueryOptions.Search"/></param>
-    public void SetSearchTerm(string? term)
+    /// <param name="skip">The new value</param>
+    public void SetSkip(int? skip)
     {
         Reduce(state => state with
         {
-            QueryOptions = state.QueryOptions with
-            {
-                Search = term
-            }
+            Skip = skip
+        });
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionListState.Search"/>
+    /// </summary>
+    /// <param name="search">The new value</param>
+    public void SetSearchTerm(string? search)
+    {
+        Reduce(state => state with
+        {
+            Search = search
+        });
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionListState.OrderBy"/>
+    /// </summary>
+    /// <param name="orderBy">The new value</param>
+    public void SetOrderBy(string? orderBy)
+    {
+        Reduce(state => state with
+        {
+            OrderBy = orderBy
+        });
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionListState.Descending"/>
+    /// </summary>
+    /// <param name="descending">The new value</param>
+    public void SetDescending(bool descending)
+    {
+        Reduce(state => state with
+        {
+            Descending = descending
+        });
+    }
+
+    /// <summary>
+    /// Adds an item to <see cref="ProjectionListState.Filters"/>
+    /// </summary>
+    /// <param name="key">The key to add</param>
+    /// <param name="value">The value to add</param>
+    public void AddFilter(string key, string value)
+    {
+        var filters = Get().Filters ?? new();
+        filters.Add(key, value);
+        Reduce(state => state with
+        {
+            Filters = new(filters)
+        });
+    }
+
+    /// <summary>
+    /// Removes an item from <see cref="ProjectionListState.Filters"/>
+    /// </summary>
+    /// <param name="key">The key to remove</param>
+    public void RemoveFilter(string key)
+    {
+        var filters = Get().Filters ?? new();
+        if (!filters.ContainsKey(key)) return;
+        filters.Remove(key);
+        Reduce(state => state with
+        {
+            Filters = new(filters)
         });
     }
 
@@ -157,15 +284,19 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// Lists projections of the specified type
     /// </summary>
     /// <returns>A new awaitable <see cref="Task"/></returns>
-    public async Task ListProjectionsAsync()
+    public async Task ListProjectionsAsync(QueryOptions queryOptions)
     {
         var projectionTypes = Get().ProjectionTypes;
         if (projectionTypes == null || projectionTypes.Count < 1) return;
-        var projections = await cloudShapesApi.Projections.ListAsync(Get().ProjectionType!.Name, Get().QueryOptions, CancellationTokenSource.Token);
+        var projections = await cloudShapesApi.Projections.ListAsync(Get().ProjectionType!.Name, queryOptions, CancellationTokenSource.Token);
         Reduce(state => state with
         {
             Projections = projections
         });
+        if (Virtualize != null)
+        {
+            await Virtualize.RefreshDataAsync();
+        }
     }
 
     /// <summary>
@@ -183,7 +314,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         {
             throw; //todo: show error to end user instead
         }
-        await ListProjectionsAsync();
+        _refresh.OnNext(System.Reactive.Unit.Default);
     }
 
     /// <summary>
@@ -296,7 +427,23 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     protected async Task OnCloudEventAsync(CloudEvent e)
     {
         await ListProjectionTypesAsync();
-        await ListProjectionsAsync();
+        _refresh.OnNext(System.Reactive.Unit.Default);
+    }
+
+    /// <summary>
+    /// Disposes of the store
+    /// </summary>
+    /// <param name="disposing">A boolean indicating whether or not the dispose of the store</param>
+    protected override void Dispose(bool disposing)
+    {
+        if (!this._disposed)
+        {
+            if (disposing)
+            {
+                this._refresh.OnCompleted();
+            }
+            this._disposed = true;
+        }
     }
 
 }
