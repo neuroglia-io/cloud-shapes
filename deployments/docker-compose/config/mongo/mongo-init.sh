@@ -1,4 +1,4 @@
-set -e
+﻿set -e
 mongod --replSet rs0 --bind_ip_all &
 MONGOD_PID=$!
 until mongosh --quiet --eval "db.adminCommand('ping')" ; do
