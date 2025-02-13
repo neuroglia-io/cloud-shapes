@@ -12,6 +12,7 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.Projections;
+using CloudShapes.Integration.Models;
 using CloudShapes.Integration.Queries.Projections;
 
 namespace CloudShapes.Api.Controllers;
@@ -33,6 +34,7 @@ public class ProjectionsController(IMediator mediator)
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpPost]
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> CreateProjection([FromBody] CreateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
@@ -49,6 +51,7 @@ public class ProjectionsController(IMediator mediator)
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpGet("{type}/{id}")]
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> GetProjection(string type, string id, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
@@ -65,6 +68,7 @@ public class ProjectionsController(IMediator mediator)
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpGet("{type}")]
     [ProducesResponseType(typeof(PagedResult<object>), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> ListProjections(string type, [FromQuery] QueryOptions queryOptions, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
@@ -81,6 +85,7 @@ public class ProjectionsController(IMediator mediator)
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpDelete("{type}/{id}")]
     [ProducesResponseType((int)HttpStatusCode.NoContent)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> DeleteProjection(string type, string id, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);

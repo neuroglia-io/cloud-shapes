@@ -43,6 +43,10 @@ public static class Problems
         /// </summary>
         public static readonly Uri NotFound = new(BaseUri, "/not-found");
         /// <summary>
+        /// Gets the uri that describes the type of problems that occur when attempting to apply a patch of an unsupported type
+        /// </summary>
+        public static readonly Uri UnsupportedPatchType = new(BaseUri, "/unsupported-patch-type");
+        /// <summary>
         /// Gets the uri that describes the type of problems that occur when Cloud Shapes failed to validate data
         /// </summary>
         public static readonly Uri ValidationFailed = new(BaseUri, "/validation-failed");
@@ -56,6 +60,7 @@ public static class Problems
             yield return IndexCreationFailed;
             yield return KeyAlreadyExists;
             yield return NotFound;
+            yield return UnsupportedPatchType;
             yield return ValidationFailed;
         }
 
@@ -80,6 +85,10 @@ public static class Problems
         /// </summary>
         public const string NotFound = "Not Found";
         /// <summary>
+        /// Gets the title of the problem that occurs when attempting to apply a patch of an unsupported type
+        /// </summary>
+        public const string UnsupportedPatchType = "Unsupported Patch Type";
+        /// <summary>
         /// Gets the title of the problem that occurs when Cloud Shapes failed to validate data
         /// </summary>
         public const string ValidationFailed = "Validation Failed";
@@ -93,6 +102,7 @@ public static class Problems
             yield return IndexCreationFailed;
             yield return KeyAlreadyExists;
             yield return NotFound;
+            yield return UnsupportedPatchType;
             yield return ValidationFailed;
         }
 
@@ -137,10 +147,29 @@ public static class Problems
     {
 
         /// <summary>
+        /// Gets the details template of a problem due to the existence of a projection type with the specified key
+        /// </summary>
+        public const string ProjectionTypeKeyAlreadyExists = "A projection type with the specified name '{name}' already exists";
+        /// <summary>
+        /// Gets the details template of a problem due to the existence of a projection with the specified key
+        /// </summary>
+        public const string ProjectionKeyAlreadyExists = "A projection of type '{type}' with the specified id '{id}' already exists";
+        /// <summary>
+        /// Gets the details template of a problem due to the failure to find the specified projection type
+        /// </summary>
+        public const string ProjectionTypeNotFound = "Failed to find a projection type with name '{name}'";
+        /// <summary>
+        /// Gets the details template of a problem due to the failure to find the specified projection
+        /// </summary>
+        public const string ProjectionNotFound = "Failed to find a projection of type '{type}' with the specified id '{id}'";
+        /// <summary>
         /// Gets the details template of a problem due to a projection validation failure
         /// </summary>
         public const string ProjectionValidationFailed = "Failed to validate a projection of type '{type}':\r\n{errors}";
-
+        /// <summary>
+        /// Gets the details template of a problem due to an unsupported patch type
+        /// </summary>
+        public const string UnsupportedPatchType = "Failed to find an handler for the specified patch type '{type}'";
     }
 
 }

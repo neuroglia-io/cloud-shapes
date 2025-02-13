@@ -23,7 +23,7 @@ global using CloudShapes.Dashboard.StateManagement;
 global using CloudShapes.Data;
 global using CloudShapes.Data.Models;
 global using CloudShapes.Data.Serialization.Json;
-global using CloudShapes.Integration;
+global using CloudShapes.Integration.Models;
 global using Json.Schema;
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Web;

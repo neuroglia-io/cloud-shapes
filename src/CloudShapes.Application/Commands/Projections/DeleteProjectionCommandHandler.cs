@@ -38,9 +38,9 @@ public class DeleteProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     public virtual async Task<IOperationResult> HandleAsync(DeleteProjectionCommand command, CancellationToken cancellationToken = default)
     {
         var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
-           ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, $"Failed to find a projection type with the specified name '{command.Type}'"));
+           ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
         var set = DbContext.Set(type);
-        if (!await set.ContainsAsync(command.Id, cancellationToken).ConfigureAwait(false)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, $"Failed to find a projection of type '{command.Type}' with the specified id '{command.Id}'"));
+        if (!await set.ContainsAsync(command.Id, cancellationToken).ConfigureAwait(false)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionNotFound, command.Type, command.Id)));
         await set.DeleteAsync(command.Id, cancellationToken).ConfigureAwait(false);
         return this.Ok();
     }

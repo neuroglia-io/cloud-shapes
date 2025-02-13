@@ -115,6 +115,7 @@ public class DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IOptions<A
         }
         stopwatch.Restart();
         var count = 0;
+        var projectionTypes = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Empty, new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
         foreach (var file in files)
         {
             try
@@ -129,27 +130,39 @@ public class DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IOptions<A
                 using var stream = file.OpenRead();
                 using var streamReader = new StreamReader(stream);
                 var text = await streamReader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-                var type = serializer.Deserialize<ProjectionType>(text)!;
-                var command = new CreateProjectionTypeCommand()
-                {
-                    Name = type.Name,
-                    Summary = type.Summary,
-                    Description = type.Description,
-                    Schema = type.Schema,
-                    Tags = type.Tags,
-                    Triggers = type.Triggers,
-                    Relationships = type.Relationships,
-                    Indexes = type.Indexes
-                };
-                await Mediator.ExecuteAndUnwrapAsync(command, cancellationToken).ConfigureAwait(false);
-                Logger.LogInformation("Successfully imported projection type with name '{type}' from file '{file}'", $"{type.Name}", file.FullName);
-                count++;
+                var projectionType = serializer.Deserialize<ProjectionType>(text)!;
+                projectionTypes.Add(projectionType);
             }
             catch (Exception ex)
             {
                 Logger.LogError("An error occurred while reading a projection type from file '{file}': {ex}", file.FullName, ex);
                 continue;
             }
+        }
+        foreach(var projectionType in PrioritizeProjectionTypes(projectionTypes))
+        {
+            try
+            {
+                var command = new CreateProjectionTypeCommand()
+                {
+                    Name = projectionType.Name,
+                    Summary = projectionType.Summary,
+                    Description = projectionType.Description,
+                    Schema = projectionType.Schema,
+                    Tags = projectionType.Tags,
+                    Triggers = projectionType.Triggers,
+                    Relationships = projectionType.Relationships,
+                    Indexes = projectionType.Indexes
+                };
+                await Mediator.ExecuteAndUnwrapAsync(command, cancellationToken).ConfigureAwait(false);
+                Logger.LogInformation("Successfully imported projection type with name '{type}'", $"{projectionType.Name}");
+                count++;
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError("An error occurred while creating the projection type with name '{name}': {ex}", projectionType.Name, ex);
+                continue;
+            } 
         }
         stopwatch.Stop();
         Logger.LogInformation("Completed importing {count} projection types in {ms} milliseconds", count, stopwatch.Elapsed.TotalMilliseconds);
@@ -169,10 +182,7 @@ public class DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IOptions<A
         stopwatch.Start();
         Logger.LogInformation("Starting importing projections from directory '{directory}'...", directory.FullName);
         var projectionTypes = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Empty, new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
-        var lookup = projectionTypes.ToDictionary(pt => pt.Name, pt => pt);
         var projectionTypeDirectories = new Dictionary<ProjectionType, DirectoryInfo>();
-        var graph = new Dictionary<string, List<string>>();
-        var indegree = new Dictionary<string, int>();
         foreach (var subdirectory in directory.GetDirectories())
         {
             var typeName = subdirectory.Name;
@@ -185,53 +195,10 @@ public class DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IOptions<A
             }
             projectionTypeDirectories[type] = subdirectory;
         }
-        foreach (var projectionType in projectionTypes)
+        foreach (var projectionType in PrioritizeProjectionTypes(projectionTypes))
         {
-            graph[projectionType.Name] = [];
-            indegree[projectionType.Name] = 0;
-        }
-        foreach (var projectionType in projectionTypes)
-        {
-            if (projectionType.Relationships == null) continue;
-            foreach (var relationship in projectionType.Relationships)
-            {
-                if (!graph.ContainsKey(relationship.Target))
-                {
-                    Logger.LogWarning($"Target '{relationship.Target}' referenced in '{projectionType.Name}' not found.");
-                    continue;
-                }
-                if (relationship.Type.Equals(ProjectionRelationshipType.OneToOne, StringComparison.OrdinalIgnoreCase))
-                {
-                    graph[relationship.Target].Add(projectionType.Name);
-                    indegree[projectionType.Name]++;
-                }
-                else if (relationship.Type.Equals(ProjectionRelationshipType.OneToMany, StringComparison.OrdinalIgnoreCase))
-                {
-                    graph[projectionType.Name].Add(relationship.Target);
-                    indegree[relationship.Target]++;
-                }
-                else
-                {
-                    Logger.LogWarning($"Unknown/unsupported relationship type '{relationship.Type}' in '{projectionType.Name}'");
-                }
-            }
-        }
-        var queue = new Queue<string>();
-        foreach (var kvp in indegree) if (kvp.Value == 0)  queue.Enqueue(kvp.Key);
-        var processingOrder = new List<string>();
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            processingOrder.Add(current);
-            var projectionType = lookup[current];
             if (projectionTypeDirectories.TryGetValue(projectionType, out directory) && directory != null) totalCount += await ProvisionProjectionsAsync(projectionType, directory, cancellationToken).ConfigureAwait(false);
-            foreach (var neighbor in graph[current])
-            {
-                indegree[neighbor]--;
-                if (indegree[neighbor] == 0) queue.Enqueue(neighbor);
-            }
         }
-        if (processingOrder.Count != projectionTypes.Count) Logger.LogError("Cycle detected or some projection types could not be processed.");
         stopwatch.Stop();
         Logger.LogInformation("Completed importing {count} projections in {ms} milliseconds", totalCount, stopwatch.Elapsed.TotalMilliseconds);
     }
@@ -283,6 +250,54 @@ public class DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IOptions<A
         typeStopwatch.Stop();
         Logger.LogInformation("Completed importing {count} projections from directory '{directory}' in {ms} milliseconds", count, directory.FullName, typeStopwatch.Elapsed.TotalMilliseconds);
         return count;
+    }
+
+    /// <summary>
+    /// Prioritize the specified <see cref="ProjectionType"/>s based on their relationships, if any, using the Kahn's algorithm
+    /// </summary>
+    /// <param name="projectionTypes">A list containing the <see cref="ProjectionType"/>s to prioritize</param>
+    /// <returns>A new ordered list containing the prioritized relationships</returns>
+    protected virtual List<ProjectionType> PrioritizeProjectionTypes(List<ProjectionType> projectionTypes)
+    {
+        var lookup = projectionTypes.ToDictionary(pt => pt.Name, pt => pt);
+        var projectionTypeDirectories = new Dictionary<ProjectionType, DirectoryInfo>();
+        var graph = new Dictionary<string, List<string>>();
+        var indegree = new Dictionary<string, int>();
+        foreach (var projectionType in projectionTypes)
+        {
+            graph[projectionType.Name] = [];
+            indegree[projectionType.Name] = 0;
+        }
+        foreach (var projectionType in projectionTypes)
+        {
+            if (projectionType.Relationships == null) continue;
+            foreach (var relationship in projectionType.Relationships)
+            {
+                if (!graph.ContainsKey(relationship.Target))
+                {
+                    Logger.LogWarning($"Target '{relationship.Target}' referenced in '{projectionType.Name}' not found.");
+                    continue;
+                }
+                graph[relationship.Target].Add(projectionType.Name);
+                indegree[projectionType.Name]++;
+            }
+        }
+        var queue = new Queue<string>();
+        foreach (var kvp in indegree) if (kvp.Value == 0) queue.Enqueue(kvp.Key);
+        var processingOrder = new List<ProjectionType>();
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            var projectionType = lookup[current];
+            processingOrder.Add(projectionType);
+            foreach (var neighbor in graph[current])
+            {
+                indegree[neighbor]--;
+                if (indegree[neighbor] == 0) queue.Enqueue(neighbor);
+            }
+        }
+        if (processingOrder.Count != projectionTypes.Count) Logger.LogError("Cycle detected or some projection types could not be processed.");
+        return processingOrder;
     }
 
     /// <inheritdoc/>

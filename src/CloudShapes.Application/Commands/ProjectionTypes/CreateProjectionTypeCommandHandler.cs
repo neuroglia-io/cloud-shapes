@@ -63,24 +63,24 @@ public class CreateProjectionTypeCommandHandler(IOptions<ApplicationOptions> opt
     public virtual async Task<IOperationResult<ProjectionType>> HandleAsync(CreateProjectionTypeCommand command, CancellationToken cancellationToken = default)
     {
         var projectionType = new ProjectionType(command.Name, command.Schema, command.Triggers, command.Indexes, command.Relationships, command.Summary, command.Description, command.Tags);
-        try
-        {
-            await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
-        }
-        catch (MongoWriteException ex) when(ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, $"A projection type with the specified name '{command.Name}' already exists"));
-        }
         var collectionName =  Pluralize.Pluralize(projectionType.Name);
         var collectionNames = await (await Database.ListCollectionNamesAsync(new ListCollectionNamesOptions(), cancellationToken).ConfigureAwait(false)).ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (collectionNames.Contains(collectionName)) throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, $"A projection type with the specified name '{command.Name}' already exists"));
+        if (collectionNames.Contains(collectionName)) throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.ProjectionTypeKeyAlreadyExists, command.Name)));
         if (command.Relationships != null)
         {
             foreach(var relationship in command.Relationships)
             {
                 var targetCollectionName = Pluralize.Pluralize(relationship.Target);
-                if (!collectionNames.Contains(targetCollectionName)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, $"Failed to find a projection type with the specified name '{relationship.Target}'"));
+                if (!collectionNames.Contains(targetCollectionName)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, relationship.Target)));
             }
+        }
+        try
+        {
+            await ProjectionTypes.InsertOneAsync(projectionType, new InsertOneOptions(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new ProblemDetailsException(new(Problems.Types.KeyAlreadyExists, Problems.Titles.KeyAlreadyExists, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.ProjectionTypeKeyAlreadyExists, command.Name)));
         }
         await Database.CreateCollectionAsync(collectionName, new CreateCollectionOptions(), cancellationToken).ConfigureAwait(false);
         var collection = Database.GetCollection<BsonDocument>(collectionName);

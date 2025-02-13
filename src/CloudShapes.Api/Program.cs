@@ -11,6 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Bson;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRouting(options =>
@@ -19,10 +22,16 @@ builder.Services.AddRouting(options =>
 });
 builder.Services.AddResponseCompression();
 builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    var setup = JsonSerializer.DefaultOptionsConfiguration;
+    JsonSerializer.DefaultOptionsConfiguration = serializerOptions =>
     {
-        JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
-        options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
-    });
+        setup(serializerOptions);
+        serializerOptions.Converters.Insert(0, new Decimal128Converter());
+    };
+    JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
+    options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
+});
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddMediator(options =>
@@ -35,7 +44,8 @@ builder.Services.AddSingleton<IMongoClient>(provider =>
     var options = provider.GetRequiredService<IOptions<ApplicationOptions>>().Value;
     BsonSerializer.RegisterSerializer(new JsonSchemaBsonSerializer());
     BsonSerializer.RegisterSerializer(new DateTimeOffsetBsonSerializer());
-    ConventionRegistry.Register("CamelCase", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
+    BsonSerializer.RegisterSerializer(new DecimalSerializer(BsonType.Double));
+    ConventionRegistry.Register("conventions", new ConventionPack { new CamelCaseElementNameConvention() }, type => true);
     return new MongoClient(options.Database.ConnectionString);
 });
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(provider.GetRequiredService<IOptions<ApplicationOptions>>().Value.Database.Name));
@@ -55,6 +65,7 @@ builder.Services.AddSingleton<IDbContext, DbContext>();
 builder.Services.AddHostedService<DatabaseProvisioner>();
 
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -72,5 +83,5 @@ app.MapControllers();
 app.MapHub<CloudEventHub>("api/ws/events");
 app.MapFallbackToFile("index.html");
 
-
 await app.RunAsync();
+

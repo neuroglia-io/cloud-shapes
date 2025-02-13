@@ -11,27 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Models;
-
-namespace CloudShapes.Integration.Queries.Projections;
+namespace CloudShapes;
 
 /// <summary>
-/// Represents the query used to list <see cref="ProjectionType"/>s
+/// Enumerates all migration outcomes
 /// </summary>
-/// <param name="type">The name of the type of projections to list</param>
-/// <param name="options">The query options</param>
-public class ListProjectionsQuery(string type, QueryOptions options)
-    : Query<PagedResult<object>>
+public static class ProjectionTypeSchemaMigrationOutcome
 {
 
     /// <summary>
-    /// Gets the name of the type of projections to list
+    /// Indicates that the projection's type schema has been updated, and that all related projections were migrated
     /// </summary>
-    public virtual string Type { get; } = type;
-
+    public const string Migrated = "migrated";
     /// <summary>
-    /// Gets the query options
+    /// Indicates that the projection's type schema has been updated, and that all related projections were validated
     /// </summary>
-    public virtual QueryOptions Options { get; } = options;
+    public const string Validated = "validated";
+    /// <summary>
+    /// Indicates that the projection's type schema has been updated
+    /// </summary>
+    public const string Updated = "updated";
 
 }
