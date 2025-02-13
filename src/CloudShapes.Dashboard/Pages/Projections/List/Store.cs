@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration;
+using CloudShapes.Integration.Models;
 using Microsoft.AspNetCore.Components.Web.Virtualization;
 
 namespace CloudShapes.Dashboard.Pages.Projections.List;

@@ -17,6 +17,7 @@
 @page "/"
 @page "/projections"
 @page "/{projectionTypeName?}"
+@using CloudShapes.Integration.Models
 @inherits StatefulComponent<ProjectionListStore, ProjectionListState>
 @inject JSInterop JSInterop
 @inject IPluralize Pluralize

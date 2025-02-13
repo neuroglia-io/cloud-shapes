@@ -40,7 +40,7 @@ public class SchemaValidator(IJsonSerializer jsonSerializer)
         if (evaluationResults.IsValid) return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.OK));
         var errors = evaluationResults.Details?
             .Where(d => d.Errors != null)
-            .SelectMany(d => d.Errors!.ToDictionary(kvp => $"{d.InstanceLocation}/{kvp.Key}", kvp => kvp.Value))
+            .SelectMany(d => d.Errors!.ToDictionary(kvp => d.InstanceLocation.ToString(), kvp => kvp.Value))
             .Select(e => new Error(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, e.Value, new(e.Key, UriKind.Relative)))
             .ToArray()!;
         return Task.FromResult<IOperationResult>(new OperationResult((int)HttpStatusCode.UnprocessableEntity, errors: errors));
