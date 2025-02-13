@@ -32,6 +32,8 @@ public class ProjectionTypesController(IMediator mediator)
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpPost]
+    [ProducesResponseType(typeof(ProjectionType), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> CreateProjectionType([FromBody] CreateProjectionTypeCommand command, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
@@ -47,6 +49,7 @@ public class ProjectionTypesController(IMediator mediator)
     /// <returns>A new awaitable <see cref="Task"/></returns>
     [HttpGet("{name}")]
     [ProducesResponseType(typeof(ProjectionType), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> GetProjectionType(string name, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
@@ -62,10 +65,27 @@ public class ProjectionTypesController(IMediator mediator)
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ProjectionType>), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> ListProjectionTypes([FromQuery] QueryOptions queryOptions, CancellationToken cancellationToken = default)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
         var result = await mediator.ExecuteAsync(new ListProjectionTypesQuery(queryOptions), cancellationToken).ConfigureAwait(false);
+        return this.Process(result);
+    }
+
+    /// <summary>
+    /// Migrates the schema of the specified projection type
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns></returns>
+    [HttpPut("migrate")]
+    [ProducesResponseType(typeof(ProjectionTypeSchemaMigrationResult), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
+    public async Task<IActionResult> MigrateProjectionType([FromBody] MigrateProjectionTypeSchemaCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var result = await mediator.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
         return this.Process(result);
     }
 
@@ -76,6 +96,8 @@ public class ProjectionTypesController(IMediator mediator)
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
     [HttpDelete("{name}")]
+    [ProducesResponseType((int)HttpStatusCode.NoContent)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> DeleteProjectionType(string name, CancellationToken cancellationToken = default)
     {
         var result = await mediator.ExecuteAsync(new DeleteProjectionTypeCommand(name), cancellationToken).ConfigureAwait(false);

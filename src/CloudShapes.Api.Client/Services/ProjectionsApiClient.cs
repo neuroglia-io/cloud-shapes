@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration;
 using CloudShapes.Integration.Commands.Projections;
+using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Api.Client.Services;
 

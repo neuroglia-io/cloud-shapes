@@ -11,87 +11,109 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using MongoDB.Bson.Serialization.Serializers;
+
 namespace CloudShapes.Application.Services;
 
 /// <summary>
 /// Represents the default implementation of the <see cref="IRepository"/> interface
 /// </summary>
-/// <param name="logger">The service used to perform logging</param>
-/// <param name="options">The service used to access the current <see cref="ApplicationOptions"/></param>
-/// <param name="database">The current <see cref="IMongoDatabase"/></param>
-/// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
-/// <param name="projections">The <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/></param>
-/// <param name="dbContext">The current <see cref="IDbContext"/></param>
-/// <param name="schemaValidator">The service used to validate schemas</param>
-/// <param name="expressionEvaluator">An <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s</param>
-/// <param name="patchHandlers">The service used to evaluate runtime expressions</param>
-/// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
-/// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
-/// <param name="type">The type of projections managed by the <see cref="IRepository"/></param>
-public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IMongoCollection<BsonDocument> projections, 
-    IDbContext dbContext, ISchemaValidator schemaValidator, IEnumerable<IPatchHandler> patchHandlers, IExpressionEvaluator expressionEvaluator, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
+public class Repository
     : IRepository
 {
 
     /// <summary>
+    /// Initializes a new <see cref="Repository"/>
+    /// </summary>
+    /// <param name="logger">The service used to perform logging</param>
+    /// <param name="options">The service used to access the current <see cref="ApplicationOptions"/></param>
+    /// <param name="database">The current <see cref="IMongoDatabase"/></param>
+    /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s</param>
+    /// <param name="projections">The <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/></param>
+    /// <param name="dbContext">The current <see cref="IDbContext"/></param>
+    /// <param name="schemaValidator">The service used to validate schemas</param>
+    /// <param name="expressionEvaluator">An <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s</param>
+    /// <param name="patchHandlers">The service used to evaluate runtime expressions</param>
+    /// <param name="cloudEventBus">The service used to observe both inbound and outbound <see cref="CloudEvent"/>s</param>
+    /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
+    /// <param name="type">The type of projections managed by the <see cref="IRepository"/></param>
+    public Repository(ILogger<Repository> logger, IOptions<ApplicationOptions> options, IMongoDatabase database, IMongoCollection<ProjectionType> projectionTypes, IMongoCollection<BsonDocument> projections,
+        IDbContext dbContext, ISchemaValidator schemaValidator, IEnumerable<IPatchHandler> patchHandlers, IExpressionEvaluator expressionEvaluator, ICloudEventBus cloudEventBus, IJsonSerializer jsonSerializer, ProjectionType type)
+    {
+        Logger = logger;
+        Options = options.Value;
+        Database = database;
+        ProjectionTypes = projectionTypes;
+        Projections = projections;
+        DbContext = dbContext;
+        SchemaValidator = schemaValidator;
+        PatchHandlers = patchHandlers;
+        ExpressionEvaluator = expressionEvaluator;
+        CloudEventBus = cloudEventBus;
+        JsonSerializer = jsonSerializer;
+        Type = type;
+        _ = MonitorProjectionTypeChangesAsync();
+    }
+
+    /// <summary>
     /// Gets the service used to perform logging
     /// </summary>
-    protected ILogger Logger { get; } = logger;
+    protected ILogger Logger { get; }
 
     /// <summary>
     /// Gets the current <see cref="ApplicationOptions"/>
     /// </summary>
-    protected ApplicationOptions Options { get; } = options.Value;
+    protected ApplicationOptions Options { get; }
 
     /// <summary>
     /// Gets the current <see cref="IMongoDatabase"/>
     /// </summary>
-    protected IMongoDatabase Database { get; } = database;
+    protected IMongoDatabase Database { get; }
 
     /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used to persist <see cref="ProjectionType"/>s
     /// </summary>
-    protected IMongoCollection<ProjectionType> ProjectionTypes { get; } = projectionTypes;
+    protected IMongoCollection<ProjectionType> ProjectionTypes { get; }
 
     /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used to store projections managed by the <see cref="IRepository"/>
     /// </summary>
-    protected IMongoCollection<BsonDocument> Projections { get; } = projections;
+    protected IMongoCollection<BsonDocument> Projections { get; }
 
     /// <summary>
     /// Gets the current <see cref="IDbContext"/>
     /// </summary>
-    protected IDbContext DbContext { get; } = dbContext;
+    protected IDbContext DbContext { get; }
 
     /// <summary>
     /// Gets the service used to validate schemas
     /// </summary>
-    protected ISchemaValidator SchemaValidator { get; } = schemaValidator;
+    protected ISchemaValidator SchemaValidator { get; }
 
     /// <summary>
     /// Gets an <see cref="IEnumerable{T}"/> containing all registered <see cref="IPatchHandler"/>s
     /// </summary>
-    protected IEnumerable<IPatchHandler> PatchHandlers { get; } = patchHandlers;
+    protected IEnumerable<IPatchHandler> PatchHandlers { get; }
 
     /// <summary>
     /// Gets the service used to evaluate runtime expressions
     /// </summary>
-    protected IExpressionEvaluator ExpressionEvaluator { get; } = expressionEvaluator;
+    protected IExpressionEvaluator ExpressionEvaluator { get; }
 
     /// <summary>
     /// Gets the service used to observe both inbound and outbound <see cref="CloudEvent"/>s
     /// </summary>
-    protected ICloudEventBus CloudEventBus { get; } = cloudEventBus;
+    protected ICloudEventBus CloudEventBus { get; }
 
     /// <summary>
     /// Gets the service used to serialize/deserialize data to/from JSON
     /// </summary>
-    protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
+    protected IJsonSerializer JsonSerializer { get; }
 
     /// <summary>
     /// Gets the type of projections managed by the <see cref="IRepository"/>
     /// </summary>
-    public ProjectionType Type { get; } = type;
+    public ProjectionType Type { get; set; }
 
     /// <inheritdoc/>
     public virtual async Task<bool> ContainsAsync(string id, CancellationToken cancellationToken = default)
@@ -127,7 +149,7 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     {
         ArgumentNullException.ThrowIfNull(projection);
         var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
-        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
+        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!)), errors: validationResult.Errors!.GroupBy(e => e.Instance?.OriginalString!).ToDictionary(g => g.Key, g => g.Select(e => e.Detail).ToArray())!));
         var projectionId = projection["_id"].ToString()!;
         projection = projection.InsertMetadata(new DocumentMetadata());
         if (Type.Relationships != null)
@@ -196,7 +218,7 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     {
         ArgumentNullException.ThrowIfNull(projection);
         var validationResult = await SchemaValidator.ValidateAsync(BsonTypeMapper.MapToDotNetValue(projection), Type.Schema, cancellationToken).ConfigureAwait(false);
-        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
+        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!)), errors: validationResult.Errors!.GroupBy(e => e.Instance?.OriginalString!).ToDictionary(g => g.Key, g => g.Select(e => e.Detail).ToArray())!));
         var metadata = BsonSerializer.Deserialize<DocumentMetadata>(projection[DocumentMetadata.PropertyName].AsBsonDocument);
         metadata.Update();
         projection = projection.InsertMetadata(metadata);
@@ -267,17 +289,17 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
     {
         ArgumentNullException.ThrowIfNull(projection);
         ArgumentNullException.ThrowIfNull(patch);
-        var projectionState = JsonSerializer.Deserialize<object>(projection.ToJson(new() { OutputMode = JsonOutputMode.RelaxedExtendedJson }))!;
+        var projectionState = BsonTypeMapper.MapToDotNetValue(projection);
         var arguments = new Dictionary<string, object>()
         {
             { RuntimeExpressions.Arguments.State, projectionState }
         };
         var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(patch.Type)) ?? throw new ProblemDetailsException(new(Problems.Types.UnsupportedPatchType, Problems.Titles.UnsupportedPatchType, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.UnsupportedPatchType, patch.Type)));
         var patchDocument = await ExpressionEvaluator.EvaluateAsync(patch.Document, new { }, arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
-        projectionState = patchHandler.ApplyPatchAsync(patch.Document, projectionState, cancellationToken).ConfigureAwait(false);
-        var validationResult = await SchemaValidator.ValidateAsync(projectionState, Type.Schema, cancellationToken).ConfigureAwait(false);
-        if (!validationResult.IsSuccess()) throw new ProblemDetailsException(new(Problems.Types.ValidationFailed, Problems.Titles.ValidationFailed, Problems.Statuses.ValidationFailed, StringFormatter.Format(Problems.Details.ProjectionValidationFailed, Type.Name, string.Join(Environment.NewLine, validationResult.Errors!))));
-        return BsonDocument.Create(projectionState);
+        projectionState = await patchHandler.ApplyPatchAsync(patch.Document, projectionState, cancellationToken).ConfigureAwait(false);
+        var json = JsonSerializer.SerializeToText(projectionState);
+        var patchedProjection = BsonDocument.Parse(json);
+        return await UpdateAsync(patchedProjection, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -367,5 +389,15 @@ public class Repository(ILogger<Repository> logger, IOptions<ApplicationOptions>
 
     /// <inheritdoc/>
     public virtual IQueryable<BsonDocument> AsQueryable() => Projections.AsQueryable();
+
+    async Task MonitorProjectionTypeChangesAsync()
+    {
+        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<ProjectionType>>().Match(change => change.FullDocument.Name == Type.Name);
+        using var cursor = await ProjectionTypes.WatchAsync(pipeline).ConfigureAwait(false);
+        await cursor.ForEachAsync(change =>
+        {
+            if (change.FullDocument != null) Type = change.FullDocument;
+        }).ConfigureAwait(false);
+    }
 
 }

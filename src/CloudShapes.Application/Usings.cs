@@ -16,6 +16,7 @@ global using CloudShapes.Application.Services;
 global using CloudShapes.Data;
 global using CloudShapes.Data.Models;
 global using CloudShapes.Integration.Events.Projections;
+global using CloudShapes.Integration.Models;
 global using Json.Schema;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;

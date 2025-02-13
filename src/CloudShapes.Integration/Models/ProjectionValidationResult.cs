@@ -11,27 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Models;
-
-namespace CloudShapes.Integration.Queries.Projections;
+namespace CloudShapes.Integration.Models;
 
 /// <summary>
-/// Represents the query used to list <see cref="ProjectionType"/>s
+/// Represents the result of a projection's validation
 /// </summary>
-/// <param name="type">The name of the type of projections to list</param>
-/// <param name="options">The query options</param>
-public class ListProjectionsQuery(string type, QueryOptions options)
-    : Query<PagedResult<object>>
+/// <param name="Id">The id of the validated projection</param>
+/// <param name="Errors">A key/values mapping containing the errors, if any, that have occurred during the projection's validation</param>
+public record ProjectionValidationResult(string Id, EquatableDictionary<string, string[]>? Errors = null)
 {
 
     /// <summary>
-    /// Gets the name of the type of projections to list
+    /// Gets a boolean indicating whether or not the projection is valid
     /// </summary>
-    public virtual string Type { get; } = type;
-
-    /// <summary>
-    /// Gets the query options
-    /// </summary>
-    public virtual QueryOptions Options { get; } = options;
+    [JsonIgnore]
+    public virtual bool IsValid => Errors == null || Errors.Count < 1;
 
 }

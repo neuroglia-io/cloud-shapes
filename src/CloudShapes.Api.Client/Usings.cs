@@ -13,9 +13,10 @@
 
 global using CloudShapes.Api.Client.Configuration;
 global using CloudShapes.Api.Client.Services;
-global using CloudShapes.Integration.Hubs;
 global using CloudShapes.Data.Models;
 global using CloudShapes.Data.Serialization.Json;
+global using CloudShapes.Integration.Hubs;
+global using CloudShapes.Integration.Models;
 global using Microsoft.AspNetCore.SignalR.Client;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.DependencyInjection.Extensions;

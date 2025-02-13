@@ -14,6 +14,8 @@
 global using CloudShapes.Data.Models;
 global using Json.Schema;
 global using Neuroglia;
+global using Neuroglia.Data;
 global using Neuroglia.Eventing.CloudEvents;
 global using Neuroglia.Mediation;
+global using System.ComponentModel.DataAnnotations;
 global using System.Text.Json.Serialization;
