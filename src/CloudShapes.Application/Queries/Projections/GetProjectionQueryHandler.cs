@@ -20,7 +20,7 @@ namespace CloudShapes.Application.Queries.Projections;
 /// </summary>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 public class GetProjectionQueryHandler(IDbContext dbContext)
-    : IQueryHandler<GetProjectionQuery, object>
+    : IQueryHandler<GetProjectionQuery, IDictionary<string, object>>
 {
 
     /// <summary>
@@ -29,11 +29,11 @@ public class GetProjectionQueryHandler(IDbContext dbContext)
     protected IDbContext DbContext { get; } = dbContext;
 
     /// <inheritdoc/>
-    public virtual async Task<IOperationResult<object>> HandleAsync(GetProjectionQuery query, CancellationToken cancellationToken = default)
+    public virtual async Task<IOperationResult<IDictionary<string, object>>> HandleAsync(GetProjectionQuery query, CancellationToken cancellationToken = default)
     {
         var set = DbContext.Set(query.Type);
         var projection = await set.GetAsync(query.Id, cancellationToken).ConfigureAwait(false) ?? throw new NullReferenceException($"Failed to find a projection of type '{query.Type}' with id '{query.Id}'");
-        return this.Ok(BsonTypeMapper.MapToDotNetValue(projection));
+        return this.Ok((IDictionary<string, object>)BsonTypeMapper.MapToDotNetValue(projection));
     }
 
 }

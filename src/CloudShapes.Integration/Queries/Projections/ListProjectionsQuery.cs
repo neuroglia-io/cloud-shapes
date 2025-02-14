@@ -21,7 +21,7 @@ namespace CloudShapes.Integration.Queries.Projections;
 /// <param name="type">The name of the type of projections to list</param>
 /// <param name="options">The query options</param>
 public class ListProjectionsQuery(string type, QueryOptions options)
-    : Query<PagedResult<object>>
+    : Query<PagedResult<IDictionary<string, object>>>
 {
 
     /// <summary>

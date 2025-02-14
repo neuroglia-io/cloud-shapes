@@ -117,9 +117,7 @@ else
         if (string.IsNullOrWhiteSpace(rawState)) validationErrors.Add("<b>State</b> must be set");
         if (validationErrors.Count > 0) return;
         var serializer = MonacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)JsonSerializer : YamlSerializer;
-        var state = string.IsNullOrWhiteSpace(rawState) 
-            ? []
-            : serializer.Deserialize<Dictionary<string, object>>(rawState)!;
+        var state = string.IsNullOrWhiteSpace(rawState) ? [] : serializer.Deserialize<Dictionary<string, object>>(rawState)!;
         var jsonNode = JsonSerializer.SerializeToNode(state);
         var evaluationOptions = new EvaluationOptions()
         {

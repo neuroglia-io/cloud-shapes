@@ -22,7 +22,7 @@ namespace CloudShapes.Application.Commands.Projections;
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 public class UpdateProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, IJsonSerializer jsonSerializer)
-    : ICommandHandler<UpdateProjectionCommand, object>
+    : ICommandHandler<UpdateProjectionCommand, IDictionary<string, object>>
 {
 
     /// <summary>
@@ -41,7 +41,7 @@ public class UpdateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
 
     /// <inheritdoc/>
-    public virtual async Task<IOperationResult<object>> HandleAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IOperationResult<IDictionary<string, object>>> HandleAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
@@ -49,7 +49,7 @@ public class UpdateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
         var projection = JsonSerializer.SerializeToBsonDocument(command.State)!;
         projection["_id"] = command.Id;
         await set.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
-        return this.Ok(BsonTypeMapper.MapToDotNetValue(projection));
+        return this.Ok((IDictionary<string, object>)BsonTypeMapper.MapToDotNetValue(projection));
     }
 
 }
