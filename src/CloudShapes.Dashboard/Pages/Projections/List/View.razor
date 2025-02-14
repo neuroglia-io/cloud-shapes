@@ -261,14 +261,16 @@ else
         Store.ToggleProjectionSelection();
     }
 
-    Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)
+    async Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)
     {
-        if (this.offcanvas == null) return Task.CompletedTask;
+        if (this.offcanvas == null) return;
         var parameters = new Dictionary<string, object>();
         parameters.Add(nameof(ProjectionDetails.ReadOnly), true);
         parameters.Add(nameof(ProjectionDetails.ProjectionType), projectionType!);
         parameters.Add(nameof(ProjectionDetails.Projection), projection);
-        return this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: parameters);
+        await this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: null);
+        await this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: parameters);
+        return;
     }
 
     void OnPageChanged(PageEvent pageEvent)

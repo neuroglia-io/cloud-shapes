@@ -13,11 +13,42 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 *@
+@using CloudShapes.Dashboard.Components.ProjectionDetailsStateManagement
 @namespace CloudShapes.Dashboard.Components
-@inject IJsonSerializer JsonSerializer
+@inherits StatefulComponent<ProjectionDetails, ProjectionDetailsStore, ProjectionDetailsState>
 
-<div class="monaco-editor-container-large">
-    <MonacoEditor Document="projection" />
+<div class="d-flex flex-column gap-3">
+    @if (projection != null) 
+    {
+        <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="vh-50" />
+    }
+    @if (problemDetails != null)
+    {
+        <div class="problems px-3">
+            <Callout Color="CalloutColor.Danger" Heading="@problemDetails.Title" Class="position-relative">
+                <Icon Name="IconName.X" Class="position-absolute" @onclick="() => Store.SetProblemDetails(null)" />
+                <p>@problemDetails.Detail</p>
+
+                @if (problemDetails.Errors != null && problemDetails.Errors.Any())
+                {
+                    foreach (KeyValuePair<string, string[]> errorContainer in problemDetails.Errors)
+                    {
+                        <strong>@errorContainer.Key:</strong>
+                        <ul>
+                            @foreach (string error in errorContainer.Value)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                }
+            </Callout>
+        </div>
+    }
+    <Button Disabled="isSaving" Color="ButtonColor.Primary" Loading="isSaving" @onclick="async _ => await Store.SaveProjectionAsync()">
+        <Icon Name="IconName.Save" />
+        Save
+    </Button>
 </div>
 
 @code {
@@ -25,6 +56,9 @@
     ProjectionType? projectionType;
     IDictionary<string, object>? projection;
     bool readOnly;
+    private ProblemDetails? problemDetails = null;
+    bool isSaving = false;
+    private Subject<string> textEditorInput = new Subject<string>();
 
     [Parameter] public ProjectionType? ProjectionType { get; set; } = null!;
 
@@ -32,13 +66,25 @@
 
     [Parameter] public bool ReadOnly { get; set; }
 
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Store.Projection.Subscribe(value => OnStateChanged(_ => projection = value), CancellationTokenSource.Token);
+        Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), CancellationTokenSource.Token);
+        Store.IsSaving.Subscribe(value => OnStateChanged(_ => isSaving = value), CancellationTokenSource.Token);
+        Store.ProblemDetails.Subscribe(value => OnStateChanged(_ => problemDetails = value), token: CancellationTokenSource.Token);
+        textEditorInput
+            .Throttle(TimeSpan.FromMilliseconds(300))
+            .DistinctUntilChanged()
+            .Subscribe(text => Store.SetProjectionValue(text));
+    }
+
     /// <inheritdoc/>
     protected override Task OnParametersSetAsync()
     {
-        if (projectionType != ProjectionType) projectionType = ProjectionType;
-        if (projection != Projection) projection = Projection;
+        if (projectionType != ProjectionType) Store.SetProjectionType(ProjectionType);
+        if (projection != Projection) Store.SetProjection(Projection);
         if (readOnly != ReadOnly) readOnly = ReadOnly;
         return base.OnParametersSetAsync();
     }
-
 }
