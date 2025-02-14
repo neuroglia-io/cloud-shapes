@@ -61,7 +61,7 @@ public interface IProjectionsApiClient
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>The newly created projection</returns>
-    Task<object> PatchAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
+    Task<object> PatchAsync(PatchProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the specified projection

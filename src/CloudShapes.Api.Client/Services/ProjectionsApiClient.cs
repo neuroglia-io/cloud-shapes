@@ -81,7 +81,7 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
     }
 
     /// <inheritdoc/>
-    public virtual async Task<object> PatchAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<object> PatchAsync(PatchProjectionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         var json = JsonSerializer.SerializeToText(command);
