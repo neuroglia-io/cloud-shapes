@@ -14,28 +14,28 @@
 namespace CloudShapes.Integration.Commands.Projections;
 
 /// <summary>
-/// Represents the command used to create a new projection
+/// Represents the command used to patch a projection
 /// </summary>
-/// <param name="type">The name of the type of projection to create</param>
-/// <param name="id">The id of the projection to create</param>
-/// <param name="state">The initial state of the projection to create</param>
-public class CreateProjectionCommand(string type, string id, IDictionary<string, object> state)
+/// <param name="type">The name of the type of projection to patch</param>
+/// <param name="id">The id of the projection to patch</param>
+/// <param name="patch">The patch to apply</param>
+public class PatchProjectionCommand(string type, string id, Patch patch)
     : Command<object>
 {
 
     /// <summary>
-    /// Gets the name of the type of projection to create
+    /// Gets the name of the type of projection to patch
     /// </summary>
     public virtual string Type { get; } = type;
 
     /// <summary>
-    /// Gets/sets the id of the projection to create
+    /// Gets/sets the id of the projection to patch
     /// </summary>
     public virtual string Id { get; } = id;
 
     /// <summary>
-    /// Gets the initial state of the projection to create
+    /// Gets the patch to apply
     /// </summary>
-    public virtual IDictionary<string, object> State { get; } = state;
+    public virtual Patch Patch { get; } = patch;
 
 }

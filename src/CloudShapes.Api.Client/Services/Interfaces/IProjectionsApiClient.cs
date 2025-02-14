@@ -12,7 +12,6 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.Projections;
-using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Api.Client.Services;
 
@@ -47,6 +46,22 @@ public interface IProjectionsApiClient
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="PagedResult{T}"/> that wraps filtered projections</returns>
     Task<PagedResult<IDictionary<string, object>>> ListAsync(string type, QueryOptions? queryOptions = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates an existing projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The newly created projection</returns>
+    Task<object> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Patches an existing projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>The newly created projection</returns>
+    Task<object> PatchAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the specified projection

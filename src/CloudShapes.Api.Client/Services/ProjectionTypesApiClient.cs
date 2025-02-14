@@ -12,7 +12,6 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.ProjectionTypes;
-using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Api.Client.Services;
 
@@ -59,6 +58,18 @@ public class ProjectionTypesApiClient(ILogger<ProjectionTypesApiClient> logger, 
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return JsonSerializer.Deserialize<PagedResult<ProjectionType>>(json)!;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<ProjectionTypeSchemaMigrationResult> MigrateSchemaAsync(MigrateProjectionTypeSchemaCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var json = JsonSerializer.SerializeToText(command);
+        using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"{PathPrefix}/schema/migrate") { Content = content };
+        using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize<ProjectionTypeSchemaMigrationResult>(json)!;
     }
 
     /// <inheritdoc/>
