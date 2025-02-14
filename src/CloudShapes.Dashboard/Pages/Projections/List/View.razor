@@ -41,14 +41,17 @@ else
     {
         <div class="d-flex flex-grow">
             <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
-            <div class="w-100 p-3">
+            <div class="w-100 p-3 d-flex flex-column">
                 <div class="projection-info pb-3">
-                    <div class="d-flex gap-3 align-items-center">
-                        <h1>@Pluralize.Pluralize(projectionType.Name)</h1>
-                        @if (!string.IsNullOrEmpty(projectionType.Description))
-                        {
-                            <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" @onclick="async () => { await descriptionModal!.ShowAsync(); }" Class="cursor-pointer" />
-                        }
+                    <div class="d-flex justify-content-between">
+                        <div class="d-flex gap-3 align-items-center">
+                            <h4>@Pluralize.Pluralize(projectionType.Name)</h4>
+                            @if (!string.IsNullOrEmpty(projectionType.Description))
+                            {
+                                <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" @onclick="async () => { await descriptionModal!.ShowAsync(); }" Class="cursor-pointer mb-2" />
+                            }
+                        </div>
+                        <button class="btn btn-sm btn-primary" title="Create new projection" @onclick="OnCreateProjectionAsync" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
                     </div>
                     @if (!string.IsNullOrEmpty(projectionType.Summary)) 
                     {
@@ -57,9 +60,6 @@ else
                 </div>
                 <div class="d-flex align-baseline">
                     <input type="search" class="form-control rounded my-2 me-2" placeholder="Search" value="@queryOptions?.Search" @oninput="e => Store.SetSearchTerm(e.Value?.ToString())" />
-                    <div class="align-baseline my-auto">
-                        <button class="btn btn-sm btn-primary" title="Create new projection" @onclick="OnCreateProjectionAsync" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-                    </div>
                     <div class="dropdown d-flex align-content-center">
                         <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
                         <ul class="dropdown-menu">

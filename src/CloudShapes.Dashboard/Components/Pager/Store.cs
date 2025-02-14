@@ -66,15 +66,19 @@ public class PagerStore(ILogger<PagerStore> logger)
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe if the current page is the first page
     /// </summary>
-    public IObservable<bool> IsFirstPage => this.Select(state => state.PageIndex == 0).DistinctUntilChanged();
+    public IObservable<bool> IsFirstPage => Observable.CombineLatest(
+        PageCount,
+        PageIndex,
+        (pageCount, pageIndex) => pageCount == 0 || pageIndex == 0
+    ).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe if the current page is the last page
     /// </summary>
     public IObservable<bool> IsLastPage => Observable.CombineLatest(
-        PageIndex,
         PageCount,
-        (index, count) => (index+1) == count
+        PageIndex,
+        (pageCount, pageIndex) => pageCount == 0 || (pageIndex + 1) == pageCount
     ).DistinctUntilChanged();
     #endregion
 
