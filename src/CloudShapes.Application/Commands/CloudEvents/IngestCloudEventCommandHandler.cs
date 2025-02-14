@@ -122,7 +122,7 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
         ArgumentNullException.ThrowIfNull(e);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         var projection = (await ExpressionEvaluator.EvaluateAsync(trigger.State, e, cancellationToken: cancellationToken).ConfigureAwait(false))!;
-        var document = BsonDocument.Create(projection);
+        var document = JsonSerializer.SerializeToBsonDocument(projection)!;
         document["_id"] = correlationId;
         await DbContext.Set(projectionType).AddAsync(document, cancellationToken).ConfigureAwait(false);
     }
@@ -161,7 +161,7 @@ public class IngestCloudEventCommandHandler(ILogger<IngestCloudEventCommandHandl
                 object updated;
                 if (trigger.State is string expression) updated = (await ExpressionEvaluator.EvaluateAsync(expression, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
                 else updated = (await ExpressionEvaluator.EvaluateAsync(trigger.State!, e, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
-                projection = BsonDocument.Create(updated);
+                projection = JsonSerializer.SerializeToBsonDocument(updated)!;
                 projection["_id"] = correlationId;
                 projection[DocumentMetadata.PropertyName] = metadata;
                 await projections.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
