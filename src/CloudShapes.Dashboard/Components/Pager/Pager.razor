@@ -17,29 +17,55 @@
 @using CloudShapes.Dashboard.Components.PagerStateManagement
 @inherits StatefulComponent<Pager, PagerStore, PagerState>
 
-<div class="pager d-flex justify-content-between align-items-center gap-3 my-3 @ClassNames">
+<div class="pager d-flex justify-content-between align-items-center gap-3 my-3 @(pageCount == 0 ? "opacity-25" : "") @ClassNames">
     <div class="pager__size d-flex align-items-center gap-3">
         <label for="items-per-page">Items per page:</label>
-        <select class="form-select w-auto" aria-label="page size selection" @onchange='(e) => Store.SetPageSize(int.Parse((string?)e.Value ?? "50"))'>
+        <select disabled="@(pageCount == 0)" class="form-select w-auto" aria-label="page size selection" @onchange='(e) => Store.SetPageSize(int.Parse((string?)e.Value ?? "50"))'>
             @foreach (var size in pageSizes)
             {
                 <option value="@size" selected="@(size == pageSize)">@size</option>
             })
         </select>
     </div>
-    <span>Page @(pageIndex + 1) of @pageCount</span>
+    @if (pageCount > 0) {
+        <span>Page @(pageIndex + 1) of @pageCount</span>
+    }
     <nav class="pager__nav navigation">
         <ul class="pagination mb-0">
-            <li class="page-item"><button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(0)"><Icon Name="IconName.ChevronBarLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" /></button></li>
-            <li class="page-item"><button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(pageIndex - 1)"><Icon Name="IconName.ChevronLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" /></button></li>
-            <li class="page-item"><button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageIndex + 1)"><Icon Name="IconName.ChevronRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" /></button></li>
-            <li class="page-item"><button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageCount - 1)"><Icon Name="IconName.ChevronBarRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" /></button></li>
+            <li class="page-item">
+                <Tooltip Title="First">
+                    <button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(0)">
+                        <Icon Name="IconName.ChevronBarLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" />
+                    </button>
+                </Tooltip>
+            </li>
+            <li class="page-item">
+                <Tooltip Title="Previous">
+                    <button class="page-link" disabled="@isFirstPage" @onclick="(_) => Store.SetPageIndex(pageIndex - 1)">
+                        <Icon Name="IconName.ChevronLeft" Color="isFirstPage ? IconColor.Muted : IconColor.Primary" />
+                    </button>
+                </Tooltip>
+                </li>
+            <li class="page-item">
+                <Tooltip Title="Next">
+                    <button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageIndex + 1)">
+                        <Icon Name="IconName.ChevronRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" />
+                    </button>
+                </Tooltip>
+            </li>
+            <li class="page-item">
+                <Tooltip Title="Last">
+                    <button class="page-link" disabled="@isLastPage" @onclick="(_) => Store.SetPageIndex(pageCount - 1)">
+                        <Icon Name="IconName.ChevronBarRight" Color="isLastPage ? IconColor.Muted : IconColor.Primary" />
+                    </button>
+                </Tooltip>
+            </li>
         </ul>
     </nav>
 </div>
 
 @code {
-    readonly int[] pageSizes = new int[] { 10, 25, 50, 100, 250, 500, 1000 };
+    readonly int[] pageSizes = new int[] { 10, 25, 50, 100 };
     long totalLength = 0;
     int pageIndex = 0;
     int previousPageIndex = 0;
