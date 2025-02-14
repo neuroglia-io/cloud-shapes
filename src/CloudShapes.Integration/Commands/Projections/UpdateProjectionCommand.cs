@@ -20,7 +20,7 @@ namespace CloudShapes.Integration.Commands.Projections;
 /// <param name="id">The id of the projection to update</param>
 /// <param name="state">The updated state of the projection</param>
 public class UpdateProjectionCommand(string type, string id, IDictionary<string, object> state)
-    : Command<object>
+    : Command<IDictionary<string, object>>
 {
 
     /// <summary>

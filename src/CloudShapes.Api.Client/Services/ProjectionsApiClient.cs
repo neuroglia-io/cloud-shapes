@@ -34,7 +34,7 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
     protected IPluralize Pluralize { get; } = pluralize;
 
     /// <inheritdoc/>
-    public virtual async Task<object> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IDictionary<string, object>> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         var json = JsonSerializer.SerializeToText(command);
@@ -42,18 +42,18 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
         using var request = new HttpRequestMessage(HttpMethod.Post, PathPrefix) { Content = content };
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<object>(json)!;
+        return JsonSerializer.Deserialize<IDictionary<string, object>>(json)!;
     }
 
     /// <inheritdoc/>
-    public virtual async Task<object> GetAsync(string type, string id, CancellationToken cancellationToken = default)
+    public virtual async Task<IDictionary<string, object>> GetAsync(string type, string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(type);
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{PathPrefix}/{Pluralize.Pluralize(type).ToCamelCase()}/{id}");
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<object>(json)!;
+        return JsonSerializer.Deserialize<IDictionary<string, object>>(json)!;
     }
 
     /// <inheritdoc/>
@@ -69,7 +69,7 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
     }
 
     /// <inheritdoc/>
-    public virtual async Task<object> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IDictionary<string, object>> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         var json = JsonSerializer.SerializeToText(command);
@@ -77,11 +77,11 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
         using var request = new HttpRequestMessage(HttpMethod.Put, PathPrefix) { Content = content };
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<object>(json)!;
+        return JsonSerializer.Deserialize<IDictionary<string, object>>(json)!;
     }
 
     /// <inheritdoc/>
-    public virtual async Task<object> PatchAsync(PatchProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IDictionary<string, object>> PatchAsync(PatchProjectionCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         var json = JsonSerializer.SerializeToText(command);
@@ -89,7 +89,7 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
         using var request = new HttpRequestMessage(HttpMethod.Patch, PathPrefix) { Content = content };
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<object>(json)!;
+        return JsonSerializer.Deserialize<IDictionary<string, object>>(json)!;
     }
 
     /// <inheritdoc/>

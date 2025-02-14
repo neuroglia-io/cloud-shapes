@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Models;
 using CloudShapes.Integration.Queries.Projections;
 
 namespace CloudShapes.Application.Queries.Projections;
@@ -22,7 +21,7 @@ namespace CloudShapes.Application.Queries.Projections;
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 public class ListProjectionsQueryHandler(IDbContext dbContext, IJsonSerializer jsonSerializer)
-    : IQueryHandler<ListProjectionsQuery, PagedResult<object>>
+    : IQueryHandler<ListProjectionsQuery, PagedResult<IDictionary<string, object>>>
 {
 
     /// <summary>
@@ -36,7 +35,7 @@ public class ListProjectionsQueryHandler(IDbContext dbContext, IJsonSerializer j
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
 
     /// <inheritdoc/>
-    public virtual async Task<IOperationResult<PagedResult<object>>> HandleAsync(ListProjectionsQuery query, CancellationToken cancellationToken = default)
+    public virtual async Task<IOperationResult<PagedResult<IDictionary<string, object>>>> HandleAsync(ListProjectionsQuery query, CancellationToken cancellationToken = default)
     {
         var set = DbContext.Set(query.Type);
         var filter = query.Options.BuildFilter<BsonDocument>(set.Type);
@@ -45,8 +44,8 @@ public class ListProjectionsQueryHandler(IDbContext dbContext, IJsonSerializer j
         var results = cursor.ToAsyncEnumerable(cancellationToken);
         if (query.Options.Skip.HasValue) results = results.Skip(query.Options.Skip.Value);
         if (query.Options.Limit.HasValue) results = results.Take(query.Options.Limit.Value);
-        var items = await results.Select(BsonTypeMapper.MapToDotNetValue).ToListAsync(cancellationToken).ConfigureAwait(false);
-        var pageResult = new PagedResult<object>(items, totalCount, query.Options.Limit, query.Options.Limit.HasValue ? ((query.Options.Skip ?? 0) / query.Options.Limit.Value) + 1 : null);
+        var items = await results.Select(BsonTypeMapper.MapToDotNetValue).Cast<IDictionary<string, object>>().ToListAsync(cancellationToken).ConfigureAwait(false);
+        var pageResult = new PagedResult<IDictionary<string, object>>(items, totalCount, query.Options.Limit, query.Options.Limit.HasValue ? ((query.Options.Skip ?? 0) / query.Options.Limit.Value) + 1 : null);
         return this.Ok(pageResult);
     }
 

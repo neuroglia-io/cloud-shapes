@@ -20,7 +20,8 @@ namespace CloudShapes.Application.Commands.Projections;
 /// </summary>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to manage <see cref="ProjectionType"/>s</param>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
-public class DeleteProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext)
+/// <param name="pluralize">The service used to pluralize words</param>
+public class DeleteProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, IPluralize pluralize)
     : ICommandHandler<DeleteProjectionCommand>
 {
 
@@ -34,13 +35,20 @@ public class DeleteProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     /// </summary>
     protected IDbContext DbContext { get; } = dbContext;
 
+    /// <summary>
+    /// Gets the service used to pluralize words
+    /// </summary>
+    protected IPluralize Pluralize { get; } = pluralize;
+
     /// <inheritdoc/>
     public virtual async Task<IOperationResult> HandleAsync(DeleteProjectionCommand command, CancellationToken cancellationToken = default)
     {
-        var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
-           ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
+        var typeName = command.Type;
+        if (Pluralize.IsPlural(typeName)) typeName = Pluralize.Singularize(typeName);
+        var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Regex("_id", new BsonRegularExpression(typeName, "i")), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+           ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, typeName)));
         var set = DbContext.Set(type);
-        if (!await set.ContainsAsync(command.Id, cancellationToken).ConfigureAwait(false)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionNotFound, command.Type, command.Id)));
+        if (!await set.ContainsAsync(command.Id, cancellationToken).ConfigureAwait(false)) throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionNotFound, typeName, command.Id)));
         await set.DeleteAsync(command.Id, cancellationToken).ConfigureAwait(false);
         return this.Ok();
     }

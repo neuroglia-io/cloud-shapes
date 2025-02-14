@@ -22,7 +22,7 @@ namespace CloudShapes.Application.Commands.Projections;
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, IJsonSerializer jsonSerializer)
-    : ICommandHandler<CreateProjectionCommand, object>
+    : ICommandHandler<CreateProjectionCommand, IDictionary<string, object>>
 {
 
     /// <summary>
@@ -41,7 +41,7 @@ public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
 
     /// <inheritdoc/>
-    public virtual async Task<IOperationResult<object>> HandleAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IOperationResult<IDictionary<string, object>>> HandleAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
@@ -49,7 +49,7 @@ public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
         var document = JsonSerializer.SerializeToBsonDocument(command.State)!;
         document["_id"] = command.Id;
         await set.AddAsync(document, cancellationToken).ConfigureAwait(false);
-        return this.Ok(BsonTypeMapper.MapToDotNetValue(document));
+        return this.Ok((IDictionary<string, object>)BsonTypeMapper.MapToDotNetValue(document));
     }
 
 }

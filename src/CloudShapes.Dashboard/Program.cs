@@ -26,7 +26,6 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
         serializerOptions.WriteIndented = true;
     };
     Neuroglia.Serialization.Json.JsonSerializer.DefaultOptionsConfiguration(options);
-    options.Converters.Add(new ObjectConverter());
 });
 builder.Services.AddLogging();
 builder.Services.AddSerialization();

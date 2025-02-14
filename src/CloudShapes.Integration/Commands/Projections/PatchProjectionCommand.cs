@@ -20,7 +20,7 @@ namespace CloudShapes.Integration.Commands.Projections;
 /// <param name="id">The id of the projection to patch</param>
 /// <param name="patch">The patch to apply</param>
 public class PatchProjectionCommand(string type, string id, Patch patch)
-    : Command<object>
+    : Command<IDictionary<string, object>>
 {
 
     /// <summary>
