@@ -19,7 +19,7 @@ namespace CloudShapes.Integration.Queries.Projections;
 /// <param name="type">The type of the projection to get</param>
 /// <param name="id">The id of the projection to get</param>
 public class GetProjectionQuery(string type, string id)
-    : Query<object>
+    : Query<IDictionary<string, object>>
 {
 
     /// <summary>

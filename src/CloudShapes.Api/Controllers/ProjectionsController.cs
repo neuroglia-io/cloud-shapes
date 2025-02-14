@@ -31,7 +31,7 @@ public class ProjectionsController(IMediator mediator)
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
-    [HttpPost]
+    [HttpPost("projections")]
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
     [ProducesErrorResponseType(typeof(ProblemDetails))]
     public async Task<IActionResult> CreateProjection([FromBody] CreateProjectionCommand command, CancellationToken cancellationToken = default)

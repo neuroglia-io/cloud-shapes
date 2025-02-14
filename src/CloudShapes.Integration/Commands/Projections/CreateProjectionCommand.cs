@@ -20,7 +20,7 @@ namespace CloudShapes.Integration.Commands.Projections;
 /// <param name="id">The id of the projection to create</param>
 /// <param name="state">The initial state of the projection to create</param>
 public class CreateProjectionCommand(string type, string id, IDictionary<string, object> state)
-    : Command<object>
+    : Command<IDictionary<string, object>>
 {
 
     /// <summary>

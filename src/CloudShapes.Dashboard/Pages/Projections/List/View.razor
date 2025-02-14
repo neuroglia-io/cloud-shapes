@@ -68,7 +68,7 @@ else
                     </div>
                 </div>
                 <Pager TotalLength="projections?.Count() ?? 0" OnPaged="OnPageChanged" PageIndex="(queryOptions?.Skip/(queryOptions?.Limit??1)) ?? 0" PageSize="queryOptions?.Limit ?? 50" />
-                <div class="table-container">
+                <div class="table-container border-top border-bottom">
                     <table class="table table-striped table-hover">
                         <thead>
                             <tr>

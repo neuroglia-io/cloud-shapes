@@ -27,7 +27,7 @@ public interface IProjectionsApiClient
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>The newly created projection</returns>
-    Task<object> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, object>> CreateAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the specified projection
@@ -36,7 +36,7 @@ public interface IProjectionsApiClient
     /// <param name="id">The id of the projection to get</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>The specified projection</returns>
-    Task<object> GetAsync(string type, string id, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, object>> GetAsync(string type, string id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists projections of the specified type
@@ -53,7 +53,7 @@ public interface IProjectionsApiClient
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>The newly created projection</returns>
-    Task<object> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, object>> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Patches an existing projection
@@ -61,7 +61,7 @@ public interface IProjectionsApiClient
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>The newly created projection</returns>
-    Task<object> PatchAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, object>> PatchAsync(PatchProjectionCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the specified projection
