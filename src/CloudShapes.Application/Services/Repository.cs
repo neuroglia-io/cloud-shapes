@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using MongoDB.Bson.Serialization.Serializers;
-
 namespace CloudShapes.Application.Services;
 
 /// <summary>
@@ -297,9 +295,7 @@ public class Repository
         var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(patch.Type)) ?? throw new ProblemDetailsException(new(Problems.Types.UnsupportedPatchType, Problems.Titles.UnsupportedPatchType, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.UnsupportedPatchType, patch.Type)));
         var patchDocument = await ExpressionEvaluator.EvaluateAsync(patch.Document, new { }, arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
         projectionState = await patchHandler.ApplyPatchAsync(patch.Document, projectionState, cancellationToken).ConfigureAwait(false);
-        var json = JsonSerializer.SerializeToText(projectionState);
-        var patchedProjection = BsonDocument.Parse(json);
-        return await UpdateAsync(patchedProjection, cancellationToken).ConfigureAwait(false);
+        return await UpdateAsync(JsonSerializer.SerializeToBsonDocument(projectionState)!, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
