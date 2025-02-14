@@ -12,7 +12,6 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.Projections;
-using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Api.Client.Services;
 
@@ -67,6 +66,30 @@ public class ProjectionsApiClient(ILogger<ProjectionsApiClient> logger, IJsonSer
         using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return JsonSerializer.Deserialize<PagedResult<IDictionary<string, object>>>(json)!;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<object> UpdateAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var json = JsonSerializer.SerializeToText(command);
+        using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+        using var request = new HttpRequestMessage(HttpMethod.Put, PathPrefix) { Content = content };
+        using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize<object>(json)!;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<object> PatchAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var json = JsonSerializer.SerializeToText(command);
+        using var content = new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+        using var request = new HttpRequestMessage(HttpMethod.Patch, PathPrefix) { Content = content };
+        using var response = await ProcessResponseAsync(await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize<object>(json)!;
     }
 
     /// <inheritdoc/>

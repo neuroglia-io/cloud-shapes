@@ -16,13 +16,13 @@ using CloudShapes.Integration.Commands.Projections;
 namespace CloudShapes.Application.Commands.Projections;
 
 /// <summary>
-/// Represents the service used to handle <see cref="CreateProjectionCommand"/>s
+/// Represents the service used to handle <see cref="UpdateProjectionCommand"/>s
 /// </summary>
 /// <param name="projectionTypes">The <see cref="IMongoCollection{TDocument}"/> used to manage <see cref="ProjectionType"/>s</param>
 /// <param name="dbContext">The current <see cref="IDbContext"/></param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
-public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, IJsonSerializer jsonSerializer)
-    : ICommandHandler<CreateProjectionCommand, object>
+public class UpdateProjectionCommandHandler(IMongoCollection<ProjectionType> projectionTypes, IDbContext dbContext, IJsonSerializer jsonSerializer)
+    : ICommandHandler<UpdateProjectionCommand, object>
 {
 
     /// <summary>
@@ -41,15 +41,15 @@ public class CreateProjectionCommandHandler(IMongoCollection<ProjectionType> pro
     protected IJsonSerializer JsonSerializer { get; } = jsonSerializer;
 
     /// <inheritdoc/>
-    public virtual async Task<IOperationResult<object>> HandleAsync(CreateProjectionCommand command, CancellationToken cancellationToken = default)
+    public virtual async Task<IOperationResult<object>> HandleAsync(UpdateProjectionCommand command, CancellationToken cancellationToken = default)
     {
         var type = await (await ProjectionTypes.FindAsync(Builders<ProjectionType>.Filter.Eq("_id", command.Type), new FindOptions<ProjectionType, ProjectionType>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new ProblemDetailsException(new(Problems.Types.NotFound, Problems.Titles.NotFound, Problems.Statuses.NotFound, StringFormatter.Format(Problems.Details.ProjectionTypeNotFound, command.Type)));
         var set = DbContext.Set(type);
-        var document = JsonSerializer.SerializeToBsonDocument(command.State)!;
-        document["_id"] = command.Id;
-        await set.AddAsync(document, cancellationToken).ConfigureAwait(false);
-        return this.Ok(BsonTypeMapper.MapToDotNetValue(document));
+        var projection = JsonSerializer.SerializeToBsonDocument(command.State)!;
+        projection["_id"] = command.Id;
+        await set.UpdateAsync(projection, cancellationToken).ConfigureAwait(false);
+        return this.Ok(BsonTypeMapper.MapToDotNetValue(projection));
     }
 
 }

@@ -12,7 +12,6 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.Projections;
-using CloudShapes.Integration.Models;
 using CloudShapes.Integration.Queries.Projections;
 
 namespace CloudShapes.Api.Controllers;
@@ -73,6 +72,38 @@ public class ProjectionsController(IMediator mediator)
     {
         if (!this.ModelState.IsValid) return this.ValidationProblem(this.ModelState);
         var result = await mediator.ExecuteAsync(new ListProjectionsQuery(type, queryOptions), cancellationToken).ConfigureAwait(false);
+        return this.Process(result);
+    }
+
+    /// <summary>
+    /// Updates an existing projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
+    [HttpPut]
+    [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
+    public async Task<IActionResult> UpdateProjection([FromBody]UpdateProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var result = await mediator.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+        return this.Process(result);
+    }
+
+    /// <summary>
+    /// Patches an existing projection
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>A new <see cref="IActionResult"/> that describes the result of the operation</returns>
+    [HttpPatch]
+    [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    [ProducesErrorResponseType(typeof(ProblemDetails))]
+    public async Task<IActionResult> PatchProjection([FromBody] PatchProjectionCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var result = await mediator.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
         return this.Process(result);
     }
 

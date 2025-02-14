@@ -12,7 +12,6 @@
 // limitations under the License.
 
 using CloudShapes.Integration.Commands.ProjectionTypes;
-using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Api.Client.Services;
 
@@ -45,6 +44,14 @@ public interface IProjectionTypesApiClient
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns>A new <see cref="PagedResult{T}"/> that wraps filtered <see cref="ProjectionType"/>s</returns>
     Task<PagedResult<ProjectionType>> ListAsync(QueryOptions? queryOptions = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Migrates the schema an existing <see cref="ProjectionType"/>
+    /// </summary>
+    /// <param name="command">The command to execute</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
+    /// <returns>A new <see cref="ProjectionTypeSchemaMigrationResult"/> that describes the projection type migration result</returns>
+    Task<ProjectionTypeSchemaMigrationResult> MigrateSchemaAsync(MigrateProjectionTypeSchemaCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the <see cref="ProjectionType"/> with the specified name

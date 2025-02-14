@@ -79,10 +79,10 @@ public class ProjectionTypesController(IMediator mediator)
     /// <param name="command">The command to execute</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/></param>
     /// <returns></returns>
-    [HttpPut("migrate")]
+    [HttpPut("schema/migrate")]
     [ProducesResponseType(typeof(ProjectionTypeSchemaMigrationResult), (int)HttpStatusCode.OK)]
     [ProducesErrorResponseType(typeof(ProblemDetails))]
-    public async Task<IActionResult> MigrateProjectionType([FromBody] MigrateProjectionTypeSchemaCommand command, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> MigrateProjectionTypeSchema([FromBody] MigrateProjectionTypeSchemaCommand command, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
         var result = await mediator.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
