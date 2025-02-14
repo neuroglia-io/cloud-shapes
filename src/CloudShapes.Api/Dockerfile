@@ -9,10 +9,14 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY readme.md /src/readme.md
+RUN echo "Placeholder README" > /src/readme.md
 COPY ["src/CloudShapes.Api/CloudShapes.Api.csproj", "src/CloudShapes.Api/"]
 COPY ["src/CloudShapes.Application/CloudShapes.Application.csproj", "src/CloudShapes.Application/"]
+COPY ["src/CloudShapes.Integration/CloudShapes.Integration.csproj", "src/CloudShapes.Integration/"]
 COPY ["src/CloudShapes.Data/CloudShapes.Data.csproj", "src/CloudShapes.Data/"]
+COPY ["src/CloudShapes.Dashboard/CloudShapes.Dashboard.csproj", "src/CloudShapes.Dashboard/"]
+COPY ["src/CloudShapes.Api.Client/CloudShapes.Api.Client.csproj", "src/CloudShapes.Api.Client/"]
+COPY ["src/CloudShapes.Dashboard.StateManagement/CloudShapes.Dashboard.StateManagement.csproj", "src/CloudShapes.Dashboard.StateManagement/"]
 RUN dotnet restore "./src/CloudShapes.Api/CloudShapes.Api.csproj"
 COPY . .
 WORKDIR "/src/src/CloudShapes.Api"
