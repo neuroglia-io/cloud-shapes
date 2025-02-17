@@ -1,0 +1,13 @@
+﻿.projection-details {
+  display: flex;
+  flex-grow: 1;
+}
+.projection-details > div {
+  display: flex;
+  justify-content: center;
+  flex-grow: 1;
+}
+.projection-details > div .tab-content {
+  display: flex;
+  flex-grow: 1;
+}

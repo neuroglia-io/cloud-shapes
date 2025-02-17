@@ -16,68 +16,92 @@
 @using CloudShapes.Dashboard.Components.ProjectionDetailsStateManagement
 @namespace CloudShapes.Dashboard.Components
 @inherits StatefulComponent<ProjectionDetails, ProjectionDetailsStore, ProjectionDetailsState>
+@inject IPluralize Pluralize
 
-<div class="flex-grow-1 d-flex flex-column gap-3">
-    @if (projection != null) 
-    {
-        @if (!isEditing)
-        {
-            <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1" IsReadOnly="true">
-                <ExtraControls>
-                    @if (!readOnly)
-                    {
-                        <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(true)" TooltipTitle="Edit projection">
-                            <Icon Name="IconName.Pencil" />
-                        </Button>
-                    }
-                </ExtraControls>
-            </MonacoEditor>
-        }
-        else 
-        {
-            <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1">
-                <ExtraControls>
-                    <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(false)" TooltipTitle="View projection">
-                        <Icon Name="IconName.Eye" />
-                    </Button>
-                </ExtraControls>
-            </MonacoEditor>
-        }
-    }
-    @if (problemDetails != null)
-    {
-        <div class="problems px-3">
-            <Callout Color="CalloutColor.Danger" Heading="@problemDetails.Title" Class="position-relative m-0">
-                <Icon Name="IconName.X" Class="position-absolute" @onclick="() => Store.SetProblemDetails(null)" />
-                <p>@problemDetails.Detail</p>
-
-                @if (problemDetails.Errors != null && problemDetails.Errors.Any())
+<div class="projection-details">
+    <Tabs @ref="tabs" EnableFadeEffect="true" NavStyle="NavStyle.Underline" Class="justify-content-center">
+        <Tab Title="Details" Active="true" Class="flex-grow-1 d-flex flex-column gap-3">
+            <Content>
+                @if (projection != null)
                 {
-                    foreach (KeyValuePair<string, string[]> errorContainer in problemDetails.Errors)
+                    @if (!isEditing)
                     {
-                        <strong>@errorContainer.Key:</strong>
-                        <ul>
-                            @foreach (string error in errorContainer.Value)
-                            {
-                                <li>@error</li>
-                            }
-                        </ul>
+                        <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1" IsReadOnly="true">
+                            <ExtraControls>
+                                @if (!readOnly)
+                                {
+                                    <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(true)" TooltipTitle="Edit projection">
+                                        <Icon Name="IconName.Pencil" />
+                                    </Button>
+                                }
+                            </ExtraControls>
+                        </MonacoEditor>
+                    }
+                    else
+                    {
+                        <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1">
+                            <ExtraControls>
+                                <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(false)" TooltipTitle="View projection">
+                                    <Icon Name="IconName.Eye" />
+                                </Button>
+                            </ExtraControls>
+                        </MonacoEditor>
                     }
                 }
-            </Callout>
-        </div>
-    }
-    @if (isEditing) 
-    {
-        <Button Disabled="isSaving" Color="ButtonColor.Primary" Loading="isSaving" @onclick="async _ => await Store.SaveProjectionAsync()">
-            <Icon Name="IconName.Save" />
-            Save
-        </Button>
-    }
+                @if (problemDetails != null)
+                {
+                    <div class="problems px-3">
+                        <Callout Color="CalloutColor.Danger" Heading="@problemDetails.Title" Class="position-relative m-0">
+                            <Icon Name="IconName.X" Class="position-absolute" @onclick="() => Store.SetProblemDetails(null)" />
+                            <p>@problemDetails.Detail</p>
+
+                            @if (problemDetails.Errors != null && problemDetails.Errors.Any())
+                            {
+                                foreach (KeyValuePair<string, string[]> errorContainer in problemDetails.Errors)
+                                {
+                                    <strong>@errorContainer.Key:</strong>
+                                    <ul>
+                                        @foreach (string error in errorContainer.Value)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                }
+                            }
+                        </Callout>
+                    </div>
+                }
+                @if (isEditing)
+                {
+                    <Button Disabled="isSaving" Color="ButtonColor.Primary" Loading="isSaving" @onclick="async _ => await Store.SaveProjectionAsync()">
+                        <Icon Name="IconName.Save" />
+                        Save
+                    </Button>
+                }
+            </Content>
+        </Tab>
+        <Tab Title="Relationships">
+            <Content>
+                @if (projectionType?.Relationships != null && projection != null && projectionType.Relationships.Count > 0)
+                {
+                    <ul class="my-3">
+                        @foreach (var relationship in projectionType.Relationships)
+                        {
+                            <li><a href='@($" /projections/{Pluralize.Pluralize(relationship.Target).ToCamelCase()}/{projection.Find(relationship.Key)}")'>(@relationship.Target) @projection.Find(relationship.Key)</a></li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p>No relationships found.</p>
+                }
+            </Content>
+        </Tab>
+    </Tabs>
 </div>
 
 @code {
-
+    Tabs? tabs;
     ProjectionType? projectionType;
     IDictionary<string, object>? projection;
     bool readOnly = false;
@@ -107,7 +131,7 @@
     }
 
     /// <inheritdoc/>
-    protected override Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync()
     {
         Store.SetIsSaving(false);
         Store.SetIsEditing(false);
@@ -115,6 +139,7 @@
         if (projectionType != ProjectionType) Store.SetProjectionType(ProjectionType);
         if (projection != Projection) Store.SetProjection(Projection);
         if (readOnly != ReadOnly) readOnly = ReadOnly;
-        return base.OnParametersSetAsync();
+        if (tabs != null) await tabs.ShowFirstTabAsync();
+        await base.OnParametersSetAsync();
     }
 }

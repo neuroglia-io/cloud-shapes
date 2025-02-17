@@ -32,6 +32,11 @@ public record ProjectionListState
     public EquatableList<ProjectionType> ProjectionTypes { get; set; } = [];
 
     /// <summary>
+    /// Gets/sets the displayed projection ID, if any
+    /// </summary>
+    public string? ProjectionId { get; set; } = null;
+
+    /// <summary>
     /// Gets/sets the name of the type of projections to list
     /// </summary>
     public string? ProjectionTypeName { get; set; }
@@ -64,7 +69,7 @@ public record ProjectionListState
     /// <summary>
     /// Gets/sets a boolean that defines whether or not to order projections in a descending fashion. Ignored if <see cref="OrderBy"/> has not been set
     /// </summary>
-    public bool Descending { get; set; } = false;
+    public bool? Descending { get; set; } = false;
 
     /// <summary>
     /// Gets/sets a dictionary of filters where the key is the field name and the value is the expected value.

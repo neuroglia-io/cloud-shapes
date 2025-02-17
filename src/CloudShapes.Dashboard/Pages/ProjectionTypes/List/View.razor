@@ -14,7 +14,7 @@
     limitations under the License.
 *@
 @namespace CloudShapes.Dashboard.Pages.ProjectionTypes.List
-@page "/projections/types"
+@page "/types"
 @using CloudShapes.Integration.Models
 @inherits StatefulComponent<ProjectionTypeListStore, ProjectionTypeListState>
 @inject IPluralize Pluralize
@@ -222,7 +222,7 @@ else
 
     void OnNewProjectionType()
     {
-        Navigation.NavigateTo("/projections/types/new", false);
+        Navigation.NavigateTo("/types/new", false);
     }
 
     async Task OnDeleteProjectionTypeAsync(ProjectionType projectionType)

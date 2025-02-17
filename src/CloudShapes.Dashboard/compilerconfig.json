@@ -1,11 +1,15 @@
 ﻿[
   {
-    "inputFile": "wwwroot/css/app.scss",
     "outputFile": "wwwroot/css/app.css",
+    "inputFile": "wwwroot/css/app.scss",
     "sourceMap": true
   },
   {
-    "inputFile": "Layout/MainLayout.razor.scss",
-    "outputFile": "Layout/MainLayout.razor.css"
+    "outputFile": "Layout/MainLayout.razor.css",
+    "inputFile": "Layout/MainLayout.razor.scss"
+  },
+  {
+    "outputFile": "Components/ProjectionDetails/ProjectionDetails.razor.css",
+    "inputFile": "Components/ProjectionDetails/ProjectionDetails.razor.scss"
   }
 ]
