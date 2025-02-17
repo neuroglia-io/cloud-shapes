@@ -17,15 +17,37 @@
 @namespace CloudShapes.Dashboard.Components
 @inherits StatefulComponent<ProjectionDetails, ProjectionDetailsStore, ProjectionDetailsState>
 
-<div class="d-flex flex-column gap-3">
+<div class="flex-grow-1 d-flex flex-column gap-3">
     @if (projection != null) 
     {
-        <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="vh-50" />
+        @if (!isEditing)
+        {
+            <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1" IsReadOnly="true">
+                <ExtraControls>
+                    @if (!readOnly)
+                    {
+                        <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(true)" TooltipTitle="Edit projection">
+                            <Icon Name="IconName.Pencil" />
+                        </Button>
+                    }
+                </ExtraControls>
+            </MonacoEditor>
+        }
+        else 
+        {
+            <MonacoEditor Document="projection" OnTextChanged="textEditorInput.OnNext" Class="flex-grow-1">
+                <ExtraControls>
+                    <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="(_) => Store.SetIsEditing(false)" TooltipTitle="View projection">
+                        <Icon Name="IconName.Eye" />
+                    </Button>
+                </ExtraControls>
+            </MonacoEditor>
+        }
     }
     @if (problemDetails != null)
     {
         <div class="problems px-3">
-            <Callout Color="CalloutColor.Danger" Heading="@problemDetails.Title" Class="position-relative">
+            <Callout Color="CalloutColor.Danger" Heading="@problemDetails.Title" Class="position-relative m-0">
                 <Icon Name="IconName.X" Class="position-absolute" @onclick="() => Store.SetProblemDetails(null)" />
                 <p>@problemDetails.Detail</p>
 
@@ -45,26 +67,30 @@
             </Callout>
         </div>
     }
-    <Button Disabled="isSaving" Color="ButtonColor.Primary" Loading="isSaving" @onclick="async _ => await Store.SaveProjectionAsync()">
-        <Icon Name="IconName.Save" />
-        Save
-    </Button>
+    @if (isEditing) 
+    {
+        <Button Disabled="isSaving" Color="ButtonColor.Primary" Loading="isSaving" @onclick="async _ => await Store.SaveProjectionAsync()">
+            <Icon Name="IconName.Save" />
+            Save
+        </Button>
+    }
 </div>
 
 @code {
 
     ProjectionType? projectionType;
     IDictionary<string, object>? projection;
-    bool readOnly;
+    bool readOnly = false;
     private ProblemDetails? problemDetails = null;
     bool isSaving = false;
+    bool isEditing = false;
     private Subject<string> textEditorInput = new Subject<string>();
 
     [Parameter] public ProjectionType? ProjectionType { get; set; } = null!;
 
     [Parameter] public IDictionary<string, object>? Projection { get; set; } = null!;
 
-    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public bool ReadOnly { get; set; } = false;
 
     protected override void OnInitialized()
     {
@@ -72,6 +98,7 @@
         Store.Projection.Subscribe(value => OnStateChanged(_ => projection = value), CancellationTokenSource.Token);
         Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), CancellationTokenSource.Token);
         Store.IsSaving.Subscribe(value => OnStateChanged(_ => isSaving = value), CancellationTokenSource.Token);
+        Store.IsEditing.Subscribe(value => OnStateChanged(_ => isEditing = value), CancellationTokenSource.Token);
         Store.ProblemDetails.Subscribe(value => OnStateChanged(_ => problemDetails = value), token: CancellationTokenSource.Token);
         textEditorInput
             .Throttle(TimeSpan.FromMilliseconds(300))
@@ -82,6 +109,9 @@
     /// <inheritdoc/>
     protected override Task OnParametersSetAsync()
     {
+        Store.SetIsSaving(false);
+        Store.SetIsEditing(false);
+        Store.SetProblemDetails(null);
         if (projectionType != ProjectionType) Store.SetProjectionType(ProjectionType);
         if (projection != Projection) Store.SetProjection(Projection);
         if (readOnly != ReadOnly) readOnly = ReadOnly;

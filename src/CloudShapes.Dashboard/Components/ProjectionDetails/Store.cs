@@ -11,9 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Microsoft.Extensions.Logging;
-using Neuroglia.Serialization;
-
 namespace CloudShapes.Dashboard.Components.ProjectionDetailsStateManagement;
 
 /// <summary>
@@ -37,7 +34,26 @@ public class ProjectionDetailsStore(ILogger<ProjectionDetailsStore> logger, IClo
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.Projection"/> changes
     /// </summary>
-    public IObservable<IDictionary<string, object>?> Projection => this.Select(state => state.Projection).DistinctUntilChanged();
+    IObservable<IDictionary<string, object>?> RawProjection => this.Select(state => state.Projection).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.Projection"/> changes
+    /// </summary>
+    public IObservable<IDictionary<string, object>?> Projection => Observable.CombineLatest(
+        RawProjection,
+        IsEditing,
+        ProjectionType,
+        (projection, isEditing, projectionType) =>
+        {
+            if (!isEditing || projectionType == null || projection == null) return projection;
+            List<string> excludedProperties = new() { "_id", "_metadata" };
+            if (projectionType.Relationships != null && projectionType.Relationships.Count > 0)
+            {
+                excludedProperties = excludedProperties.Concat(projectionType.Relationships.Select(relationship => relationship.Path)).ToList();
+            }
+            return new Dictionary<string, object>(projection.Where(kvp => !excludedProperties.Any(prop => kvp.Key == prop || kvp.Key.StartsWith($"{prop}."))));
+        }
+    ).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.SerializedProjection"/> changes
@@ -53,6 +69,11 @@ public class ProjectionDetailsStore(ILogger<ProjectionDetailsStore> logger, IClo
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.IsSaving"/> changes
     /// </summary>
     public IObservable<bool> IsSaving => this.Select(state => state.IsSaving).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.IsEditing"/> changes
+    /// </summary>
+    public IObservable<bool> IsEditing => this.Select(state => state.IsEditing).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionDetailsState.ProblemType"/> changes
@@ -144,10 +165,19 @@ public class ProjectionDetailsStore(ILogger<ProjectionDetailsStore> logger, IClo
     }
 
     /// <summary>
+    /// Sets the state's <see cref="ProjectionDetailsState.IsEditing"/>
+    /// </summary>
+    /// <param name="isEditing">The new value</param>
+    public void SetIsEditing(bool isEditing)
+    {
+        Reduce(state => state with { IsEditing = isEditing });
+    }
+
+    /// <summary>
     /// Sets the state's <see cref="ProjectionDetailsState.IsSaving"/>
     /// </summary>
     /// <param name="isSaving">The new value</param>
-    void SetSaving(bool isSaving)
+    public void SetIsSaving(bool isSaving)
     {
         Reduce(state => state with { IsSaving = isSaving });
     }
@@ -165,20 +195,25 @@ public class ProjectionDetailsStore(ILogger<ProjectionDetailsStore> logger, IClo
         var serializedProjection = Get(state => state.SerializedProjection);
         if (projectionType == null || projection == null || string.IsNullOrWhiteSpace(serializedProjection)) return;
         SetProblemDetails(null);
-        SetSaving(true);
+        SetIsSaving(true);
         if (monacoEditorHelper.PreferredLanguage == PreferredLanguage.YAML) serializedProjection = yamlSerializer.ConvertToJson(serializedProjection);
         var jsonPatch = JsonPatch.FromDiff(jsonSerializer.SerializeToElement(projection)!.Value, jsonSerializer.SerializeToElement(jsonSerializer.Deserialize<IDictionary<string, object>>(serializedProjection))!.Value);
         var patch = jsonSerializer.Deserialize<Json.Patch.JsonPatch>(jsonPatch.RootElement);
         if (patch != null)
         {
-            var projectionPatch = new Patch(PatchType.JsonPatch, jsonPatch);
+            List<string> excludedProperties = new() { "_id", "_metadata" };
+            if (projectionType.Relationships != null && projectionType.Relationships.Count > 0)
+            {
+                excludedProperties = excludedProperties.Concat(projectionType.Relationships.Select(relationship => relationship.Path)).ToList();
+            }
+            excludedProperties = excludedProperties.Select(path => $"/{path.Replace(".", "/")}").ToList();
+            patch = new(patch.Operations.Where(op => !excludedProperties.Any(prop => op.Path.ToString() == prop || op.Path.ToString().StartsWith($"{prop}/"))).ToArray());
+            var projectionPatch = new Patch(PatchType.JsonPatch, patch);
             try
             {
-                this.Logger.LogInformation($"jsonPatch: {jsonSerializer.SerializeToText(jsonPatch)}");
-                this.Logger.LogInformation($"patch: {jsonSerializer.SerializeToText(patch)}");
-                this.Logger.LogInformation($"projectionPatch: {jsonSerializer.SerializeToText(projectionPatch)}");
-                this.Logger.LogInformation($"serializedProjection: {serializedProjection}");
-                projection = (IDictionary<string, object>)(await cloudShapesApi.Projections.PatchAsync(new(projectionType.Name, projection["_id"].ToString()!, projectionPatch), CancellationTokenSource.Token));
+                projection = await cloudShapesApi.Projections.PatchAsync(new(projectionType.Name, projection["_id"].ToString()!, projectionPatch), CancellationTokenSource.Token);
+                SetIsEditing(false);
+                SetProjection(projection);
             }
             catch (ProblemDetailsException ex)
             {
@@ -189,7 +224,7 @@ public class ProjectionDetailsStore(ILogger<ProjectionDetailsStore> logger, IClo
                 this.Logger.LogError("Unable to update resource: {exception}", ex.ToString());
             }
         }
-        SetSaving(false);
+        SetIsSaving(false);
     }
     #endregion
 

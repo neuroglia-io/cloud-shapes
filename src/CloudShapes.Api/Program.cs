@@ -21,17 +21,22 @@ builder.Services.AddRouting(options =>
     options.LowercaseUrls = true;
 });
 builder.Services.AddResponseCompression();
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    var setup = JsonSerializer.DefaultOptionsConfiguration;
-    JsonSerializer.DefaultOptionsConfiguration = serializerOptions =>
+builder.Services
+    .AddControllers(options =>
     {
-        setup(serializerOptions);
-        serializerOptions.Converters.Insert(0, new Decimal128Converter());
-    };
-    JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
-    options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
-});
+        options.Filters.Add<ProblemDetailsExceptionFilter>();
+    })
+    .AddJsonOptions(options =>
+    {
+        var setup = JsonSerializer.DefaultOptionsConfiguration;
+        JsonSerializer.DefaultOptionsConfiguration = serializerOptions =>
+        {
+            setup(serializerOptions);
+            serializerOptions.Converters.Insert(0, new Decimal128Converter());
+        };
+        JsonSerializer.DefaultOptionsConfiguration(options.JsonSerializerOptions);
+        options.JsonSerializerOptions.Converters.Add(new ObjectConverter());
+    });
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 builder.Services.AddMediator(options =>

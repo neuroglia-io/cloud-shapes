@@ -39,6 +39,11 @@ public record ProjectionDetailsState
     public bool IsSaving { get; set; } = false;
 
     /// <summary>
+    /// Gets/sets a boolean indicating if the projection is being edited
+    /// </summary>
+    public bool IsEditing { get; set; } = false;
+
+    /// <summary>
     /// Gets/sets the <see cref="ProblemDetails"/> type that occurred when trying to save the projection, if any
     /// </summary>
     public Uri? ProblemType { get; set; } = null;
