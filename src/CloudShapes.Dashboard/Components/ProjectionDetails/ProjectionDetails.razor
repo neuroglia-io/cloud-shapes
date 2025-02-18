@@ -17,6 +17,7 @@
 @namespace CloudShapes.Dashboard.Components
 @inherits StatefulComponent<ProjectionDetails, ProjectionDetailsStore, ProjectionDetailsState>
 @inject IPluralize Pluralize
+@inject NavigationManager Navigation
 
 <div class="projection-details">
     <Tabs @ref="tabs" EnableFadeEffect="true" NavStyle="NavStyle.Underline" Class="justify-content-center">
@@ -82,19 +83,43 @@
         </Tab>
         <Tab Title="Relationships">
             <Content>
-                @if (projectionType?.Relationships != null && projection != null && projectionType.Relationships.Count > 0)
-                {
-                    <ul class="my-3">
+                <div class="d-flex flex-wrap justify-content-center mt-3 gap-3">
+                    @if (projectionType?.Relationships != null && projection != null && projectionType.Relationships.Count > 0)
+                    {
                         @foreach (var relationship in projectionType.Relationships)
                         {
-                            <li><a href='@($" /projections/{Pluralize.Pluralize(relationship.Target).ToCamelCase()}/{projection.Find(relationship.Key)}")'>(@relationship.Target) @projection.Find(relationship.Key)</a></li>
+                            if (relationship.Type != "one-to-many")
+                            {
+                                <div class="cursor-pointer p-3 border rounded w-25" @onclick='(_) => Navigation.NavigateTo($"/projections/{Pluralize.Pluralize(relationship.Target).ToCamelCase()}/{projection.Find(relationship.Key)}")'>
+                                    <Badge Class="w-100 text-truncate" Color="BadgeColor.Secondary" VisuallyHiddenText="Relationship type" IndicatorType="BadgeIndicatorType.RoundedPill">
+                                        <Icon Name="IconName.Person"  />
+                                        @relationship.Type
+                                    </Badge><br />
+                                    <Badge Class="w-100 text-truncate" Color="BadgeColor.Danger" VisuallyHiddenText="Relationship target" IndicatorType="BadgeIndicatorType.RoundedPill">@relationship.Target</Badge>
+                                    <br />
+                                    <Badge Class="w-100 text-truncate" Color="BadgeColor.Primary" VisuallyHiddenText="Relationship key" IndicatorType="BadgeIndicatorType.RoundedPill">@projection.Find(relationship.Key)</Badge>
+                                </div>
+                            }
+                            else
+                            {
+                                var key = relationship.Key.Replace(":", @"\:");
+                                var value = projection["_id"].ToString();
+                                <div class="cursor-pointer p-3 border rounded w-25" @onclick='(_) => Navigation.NavigateTo($"/projections/{Pluralize.Pluralize(relationship.Target).ToCamelCase()}?filters={key}:{value}")'>
+                                    <Badge Class="w-100 text-truncate" Color="BadgeColor.Secondary" VisuallyHiddenText="Relationship type" IndicatorType="BadgeIndicatorType.RoundedPill">
+                                        <Icon Name="IconName.People"  />
+                                        @relationship.Type
+                                    </Badge><br />
+                                    <Badge Class="w-100 text-truncate" Color="BadgeColor.Danger" VisuallyHiddenText="Relationship target" IndicatorType="BadgeIndicatorType.RoundedPill">@relationship.Target</Badge><br />
+                                    <Badge Class="opacity-0">Space filling badge</Badge>
+                                </div>
+                            }
                         }
-                    </ul>
-                }
-                else
-                {
-                    <p>No relationships found.</p>
-                }
+                    }
+                    else
+                    {
+                        <p>No relationship found.</p>
+                    }
+                </div>
             </Content>
         </Tab>
     </Tabs>

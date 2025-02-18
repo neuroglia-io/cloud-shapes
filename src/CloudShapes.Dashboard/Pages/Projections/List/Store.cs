@@ -12,8 +12,6 @@
 // limitations under the License.
 
 
-using CloudShapes.Dashboard.StateManagement;
-
 namespace CloudShapes.Dashboard.Pages.Projections.List;
 
 /// <summary>
@@ -135,7 +133,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
                  Filters = filters?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
              }
         )
-        .Throttle(TimeSpan.FromMilliseconds(100))
+        .Throttle(TimeSpan.FromMilliseconds(1))
         .DistinctUntilChanged();
     #endregion
 
@@ -237,17 +235,54 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     }
 
     /// <summary>
+    /// Parses the query filters and adds them to <see cref="ProjectionListState.Filters"/>
+    /// </summary>
+    /// <param name="queryFilters">The query filters to parse and add</param>
+    public void ParseQueryFilters(string[]? queryFilters)
+    {
+        ClearFilters();
+        if (queryFilters == null) return;
+        foreach(var queryFilter in queryFilters)
+        {
+            int index = 0;
+            ReadOnlySpan<char> span = queryFilter;
+            while (index < span.Length)
+            {
+                if (span[index] == ':' && (index == 0 || span[index - 1] != '\\'))
+                    break;
+                index++;
+            }
+            string key = span.Slice(0, index).ToString().Replace(@"\:", ":");
+            string value = (index < span.Length) ? span.Slice(index + 1).ToString() : string.Empty;
+            AddFilter(key, value);
+        }
+    }
+
+    /// <summary>
+    /// Clears the filters
+    /// </summary>
+    public void ClearFilters()
+    {
+        Reduce(state => state with
+        {
+            Filters = new()
+        });
+    }
+
+    /// <summary>
     /// Adds an item to <see cref="ProjectionListState.Filters"/>
     /// </summary>
     /// <param name="key">The key to add</param>
     /// <param name="value">The value to add</param>
     public void AddFilter(string key, string value)
     {
-        var filters = Get().Filters ?? new();
-        filters.Add(key, value);
+        var filters = new EquatableDictionary<string, string>(Get().Filters ?? new())
+        {
+            { key, value }
+        };
         Reduce(state => state with
         {
-            Filters = new(filters)
+            Filters = filters
         });
     }
 
@@ -257,7 +292,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <param name="key">The key to remove</param>
     public void RemoveFilter(string key)
     {
-        var filters = Get().Filters ?? new();
+        var filters = new EquatableDictionary<string, string>(Get().Filters ?? new());
         if (!filters.ContainsKey(key)) return;
         filters.Remove(key);
         Reduce(state => state with
@@ -437,6 +472,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
             QueryOptions,
             (_, typeName, queryOptions) => (typeName, queryOptions)
         )
+            .Throttle(TimeSpan.FromMilliseconds(100))
             .Where(payload => {
                 var (typeName, _) = payload;
                 return Get().ProjectionTypes.Count >= 1 && Get().ProjectionType?.Name != typeName;

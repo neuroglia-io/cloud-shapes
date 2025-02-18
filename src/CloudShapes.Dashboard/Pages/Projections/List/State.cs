@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Models;
 
 namespace CloudShapes.Dashboard.Pages.Projections.List;
 
@@ -39,32 +38,32 @@ public record ProjectionListState
     /// <summary>
     /// Gets/sets the name of the type of projections to list
     /// </summary>
-    public string? ProjectionTypeName { get; set; }
+    public string? ProjectionTypeName { get; set; } = null;
 
     /// <summary>
     /// Gets/sets the type of projections to list
     /// </summary>
-    public ProjectionType? ProjectionType { get; set; }
+    public ProjectionType? ProjectionType { get; set; } = null;
 
     /// <summary>
     /// Gets/sets maximum number of projections to return.
     /// </summary>
-    public int? Limit { get; set; }
+    public int? Limit { get; set; } = null;
 
     /// <summary>
     /// Gets/sets the number of projections to skip, used for pagination.
     /// </summary>
-    public int? Skip { get; set; }
+    public int? Skip { get; set; } = null;
 
     /// <summary>
     /// Gets/sets the term to search for, if any
     /// </summary>
-    public string? Search { get; set; }
+    public string? Search { get; set; } = null;
 
     /// <summary>
     /// Gets/sets the property to order items by, if any
     /// </summary>
-    public string? OrderBy { get; set; }
+    public string? OrderBy { get; set; } = null;
 
     /// <summary>
     /// Gets/sets a boolean that defines whether or not to order projections in a descending fashion. Ignored if <see cref="OrderBy"/> has not been set
@@ -74,12 +73,12 @@ public record ProjectionListState
     /// <summary>
     /// Gets/sets a dictionary of filters where the key is the field name and the value is the expected value.
     /// </summary>
-    public virtual EquatableDictionary<string, string>? Filters { get; set; }
+    public virtual EquatableDictionary<string, string>? Filters { get; set; } = new();
 
     /// <summary>
     /// Gets/sets the current page of projections to list, if any
     /// </summary>
-    public PagedResult<IDictionary<string, object>>? Projections { get; set; }
+    public PagedResult<IDictionary<string, object>>? Projections { get; set; } = null;
 
     /// <summary>
     /// Gets/sets a list that contains the ids of all selected projections

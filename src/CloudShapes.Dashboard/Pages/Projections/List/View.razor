@@ -161,6 +161,7 @@ else
     [SupplyParameterFromQuery] string? Search { get; set; }
     [SupplyParameterFromQuery] string? OrderBy { get; set; }
     [SupplyParameterFromQuery] bool? Descending { get; set; }
+    [SupplyParameterFromQuery] string[]? Filters { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,13 +170,15 @@ else
         Store.Projections.Subscribe(value => OnStateChanged(_ => projections = value?.Items), CancellationTokenSource.Token);
         Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), CancellationTokenSource.Token);
         Store.QueryOptions.Subscribe(value => {
+            OnStateChanged(_ => queryOptions = value);
             var parameters = new Dictionary<string, object?>()
             {
-                { nameof(Limit).ToLower(), value?.Limit },
-                { nameof(Skip).ToLower(), value?.Skip },
-                { nameof(Search).ToLower(), value?.Search },
-                { nameof(OrderBy).ToLower(), value?.OrderBy },
-                { nameof(Descending).ToLower(), value?.Descending == true ? true : null }
+                [nameof(Limit).ToLower()] = value?.Limit,
+                [nameof(Skip).ToLower()] = value?.Skip,
+                [nameof(Search).ToLower()] = value?.Search,
+                [nameof(OrderBy).ToLower()] = value?.OrderBy,
+                [nameof(Descending).ToLower()] = value?.Descending == true ? true : null,
+                [nameof(Filters).ToLower()] = EncodeFilters(value?.Filters),
             };
             Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), false);
         }, token: CancellationTokenSource.Token);
@@ -242,7 +245,17 @@ else
         {
             Store.SetDescending(Descending);
         }
+        if (!(EncodeFilters(queryOptions?.Filters) ?? []).SequenceEqual(Filters ?? []))
+        {
+            Store.ParseQueryFilters(Filters);
+        }
         base.OnParametersSet();
+    }
+
+    string[]? EncodeFilters(Dictionary<string, string>? filters)
+    {
+        if (filters == null) return null;
+        return filters.Select((kvp) => $"{kvp.Key.Replace(":", @"\:")}:{kvp.Value}").ToArray();
     }
 
     void OnCreateProjectionType()
