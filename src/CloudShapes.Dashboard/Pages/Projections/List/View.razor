@@ -126,13 +126,13 @@ else
 
 }
 
-<Offcanvas @ref="offcanvas" Size="OffcanvasSize.Large" UseStaticBackdrop="false" />
+<Offcanvas @ref="offcanvas" Size="OffcanvasSize.Large" UseStaticBackdrop="false" BodyCssClass="d-flex" />
 <ConfirmDialog @ref="dialog" />
 <Modal @ref="modal" Size="ModalSize.Large" IsVerticallyCentered="true" />
 
 <Modal @ref="descriptionModal" Size="ModalSize.Large" IsVerticallyCentered="true">
     <HeaderTemplate>
-        @(projectionType.Name) - Description
+        @(projectionType!.Name) - Description
     </HeaderTemplate>
     <BodyTemplate>
         <Markdown>@projectionType!.Description</Markdown>
@@ -261,14 +261,15 @@ else
         Store.ToggleProjectionSelection();
     }
 
-    Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)
+    async Task OnShowProjectionOffcanvasAsync(IDictionary<string, object> projection)
     {
-        if (this.offcanvas == null) return Task.CompletedTask;
+        if (this.offcanvas == null) return;
         var parameters = new Dictionary<string, object>();
-        parameters.Add(nameof(ProjectionDetails.ReadOnly), true);
         parameters.Add(nameof(ProjectionDetails.ProjectionType), projectionType!);
         parameters.Add(nameof(ProjectionDetails.Projection), projection);
-        return this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: parameters);
+        await this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: null);
+        await this.offcanvas.ShowAsync<ProjectionDetails>(title: $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(projectionType!.Name)} {projection["_id"]}", parameters: parameters);
+        return;
     }
 
     void OnPageChanged(PageEvent pageEvent)

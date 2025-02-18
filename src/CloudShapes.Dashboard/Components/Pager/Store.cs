@@ -11,22 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using BlazorMonaco.Editor;
-
 namespace CloudShapes.Dashboard.Components.PagerStateManagement;
 
 /// <summary>
 /// Represents the <see cref="ComponentStore{TState}" /> of a <see cref="Pager"/>
 /// </summary>
-/// <param name="logger">The service used to perform logging</param>
-public class PagerStore(ILogger<PagerStore> logger)
+public class PagerStore()
     : ComponentStore<PagerState>(new())
 {
-
-    /// <summary>
-    /// Gets the service used to perform logging
-    /// </summary>
-    protected ILogger<PagerStore> Logger { get; } = logger;
 
     #region Selectors
     /// <summary>
@@ -89,7 +81,7 @@ public class PagerStore(ILogger<PagerStore> logger)
     /// <param name="totalLength">The new value</param>
     public void SetTotalLength(long totalLength)
     {
-        this.Reduce(state => state with {
+        Reduce(state => state with {
             TotalLength = totalLength
         });
     }
@@ -101,7 +93,7 @@ public class PagerStore(ILogger<PagerStore> logger)
     public void SetPageIndex(int pageIndex)
     {
         var previousPageIndex = this.Get(state => state.PageIndex);
-        this.Reduce(state => state with
+        Reduce(state => state with
         {
             PageIndex = pageIndex,
             PreviousPageIndex = previousPageIndex
@@ -115,21 +107,12 @@ public class PagerStore(ILogger<PagerStore> logger)
     public void SetPageSize(int pageSize)
     {
         var previousPageSize = this.Get(state => state.PageSize);
-        this.Reduce(state => state with
+        Reduce(state => state with
         {
             PageSize = pageSize,
             PreviousPageSize = previousPageSize
         });
     }
     #endregion
-
-    #region Actions
-    #endregion
-
-    /// <inheritdoc/>
-    public override Task InitializeAsync()
-    {
-        return base.InitializeAsync();
-    }
 
 }

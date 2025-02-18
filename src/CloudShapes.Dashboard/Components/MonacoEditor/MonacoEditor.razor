@@ -13,15 +13,19 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 *@
-@namespace CloudShapes.Dashboard.Components
 @using CloudShapes.Dashboard.Components.MonacoEditorStateManagement
+@namespace CloudShapes.Dashboard.Components
 @inherits StatefulComponent<MonacoEditor, MonacoEditorStore, MonacoEditorState>
 
 <div class="d-flex justify-content-between mb-2">
-    <div>
+    <div class="d-flex gap-2">
         <Button Outline="true" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="Store.OnCopyToClipboard" TooltipTitle="Copy to clipboard">
             <Icon Name="IconName.Clipboard" />
         </Button>
+        @if (ExtraControls != null)
+        {
+            @ExtraControls
+        }
     </div>
     <PreferredLanguageSelector PreferredLanguageChange="Store.ToggleTextBasedEditorLanguageAsync" />
 </div>
@@ -29,9 +33,15 @@
     ConstructionOptions="Store.StandaloneEditorConstructionOptions"
     OnDidInit="Store.OnTextBasedEditorInitAsync"
     OnDidChangeModelContent="OnDidChangeModelContent"
-    CssClass="h-300-px" />
+    CssClass="@(ClassNames ?? "h-300-px")" />
 
 @code {
+
+    protected string? ClassNames => Class;
+    /// <summary>
+    /// Gets/sets the additional css classes
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
 
     [Parameter] public bool IsReadOnly { get; set; } = false;
 
@@ -44,6 +54,8 @@
     [Parameter] public EventCallback<string> OnTextChanged { get; set; }
 
     [Parameter] public string ModelName { get; set; } = string.Empty;
+
+    [Parameter] public RenderFragment? ExtraControls { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {

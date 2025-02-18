@@ -9,3 +9,30 @@
 .monaco-extra-small {
     height: 100px !important;
 }
+
+.problems {
+    position: absolute;
+    bottom: 65px;
+    left: 0;
+    max-height: 300px;
+    overflow: scroll;
+    width: 100%;
+    opacity: 0.3;
+    &:hover {
+        opacity: 1;
+    }
+
+    .bb-callout {
+        .bi.bi-x.position-absolute {
+            cursor: pointer;
+            top: $spacer;
+            right: $spacer;
+        }
+    }
+
+    &.problems-bottom {
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+}
