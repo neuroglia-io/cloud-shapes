@@ -89,6 +89,7 @@ public abstract class StatefulComponent<TComponent, TStore, TState>
             if (disposing)
             {
                 this._store.Dispose();
+                this.CancellationTokenSource.Cancel();
                 this.CancellationTokenSource.Dispose();
             }
             this._Disposed = true;

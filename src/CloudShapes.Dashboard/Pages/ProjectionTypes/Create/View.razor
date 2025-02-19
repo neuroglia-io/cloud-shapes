@@ -14,7 +14,7 @@
     limitations under the License.
 *@
 @namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create
-@page "/projections/types/new"
+@page "/types/new"
 @using CloudShapes.Integration.Commands.ProjectionTypes
 @inherits StatefulComponent<CreateProjectionTypeStore, CreateProjectionTypeState>
 @inject NavigationManager Navigation
@@ -624,7 +624,7 @@
             );
             if (!confirmation) return;
         }
-        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/projections/types", false);
+        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/types", false);
     }
 
 }

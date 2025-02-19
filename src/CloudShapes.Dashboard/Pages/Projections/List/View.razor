@@ -15,8 +15,7 @@
 *@
 @namespace CloudShapes.Dashboard.Pages.Projections.List
 @page "/"
-@page "/projections"
-@page "/{projectionTypeName?}"
+@page "/projections/{projectionTypeName?}/{projectionId?}"
 @using CloudShapes.Integration.Models
 @inherits StatefulComponent<ProjectionListStore, ProjectionListState>
 @inject JSInterop JSInterop
@@ -40,7 +39,7 @@ else
     else
     {
         <div class="d-flex flex-grow">
-            <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/projections/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+            <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
             <div class="w-100 p-3 d-flex flex-column">
                 <div class="projection-info pb-3">
                     <div class="d-flex justify-content-between">
@@ -88,7 +87,7 @@ else
                                     @{
                                         var projectionId = (string)projection["_id"];
                                     }
-                                    <tr @onclick="async _ => await OnShowProjectionOffcanvasAsync(projection)" class="cursor-pointer">
+                                    <tr @onclick='(_) => Navigation.NavigateTo($"/projections/{Pluralize.Pluralize(projectionType.Name).ToCamelCase()}/{projectionId}", false)' class="cursor-pointer">
                                         <td>@projectionId</td>
                                         <td class="text-center">@DateTimeOffset.Parse((string)projection.Find("_metadata.createdAt")!).AsMoment()</td>
                                         <td class="text-center">@DateTimeOffset.Parse((string)projection.Find("_metadata.lastModified")!).AsMoment()</td>
@@ -148,6 +147,7 @@ else
     Modal? modal;
     bool loading = true;
     string? projectionTypeName;
+    IDictionary<string, object>? projection;
     ProjectionType? projectionType;
     ElementReference? selectAllCheckbox;
     IEnumerable<IDictionary<string, object>>? projections;
@@ -155,14 +155,42 @@ else
     QueryOptions? queryOptions;
 
     [Parameter] public string? ProjectionTypeName { get; set; }
+    [Parameter] public string? ProjectionId { get; set; }
+    [SupplyParameterFromQuery] int? Limit { get; set; }
+    [SupplyParameterFromQuery] int? Skip { get; set; }
+    [SupplyParameterFromQuery] string? Search { get; set; }
+    [SupplyParameterFromQuery] string? OrderBy { get; set; }
+    [SupplyParameterFromQuery] bool? Descending { get; set; }
+    [SupplyParameterFromQuery] string[]? Filters { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), token: CancellationTokenSource.Token);
+        Store.Loading.Subscribe(value => OnStateChanged(_ => loading = value), CancellationTokenSource.Token);
         Store.Projections.Subscribe(value => OnStateChanged(_ => projections = value?.Items), CancellationTokenSource.Token);
-        Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), token: CancellationTokenSource.Token);
-        Store.QueryOptions.Subscribe(value => OnStateChanged(_ => queryOptions = value), token: CancellationTokenSource.Token);
+        Store.ProjectionType.Subscribe(value => OnStateChanged(_ => projectionType = value), CancellationTokenSource.Token);
+        Store.QueryOptions.Subscribe(value => {
+            OnStateChanged(_ => queryOptions = value);
+            var parameters = new Dictionary<string, object?>()
+            {
+                [nameof(Limit).ToLower()] = value?.Limit,
+                [nameof(Skip).ToLower()] = value?.Skip,
+                [nameof(Search).ToLower()] = value?.Search,
+                [nameof(OrderBy).ToLower()] = value?.OrderBy,
+                [nameof(Descending).ToLower()] = value?.Descending == true ? true : null,
+                [nameof(Filters).ToLower()] = EncodeFilters(value?.Filters),
+            };
+            Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(parameters), false);
+        }, token: CancellationTokenSource.Token);
+        Store.Projection.SubscribeAsync(async value => {
+            projection = value;
+            if (value == null) 
+            {
+                if (offcanvas != null) await offcanvas.HideAsync();
+                return;
+            }
+            await OnShowProjectionOffcanvasAsync(value);
+        }, CancellationTokenSource.Token);
         Store.ProjectionTypes.SubscribeAsync(async _ =>
         {
             if (sidebar == null) return;
@@ -183,7 +211,7 @@ else
             }
         }, CancellationTokenSource.Token);
         if(!string.IsNullOrWhiteSpace(ProjectionTypeName)) Store.SetProjectionTypeName(ProjectionTypeName);
-        if(projectionType != null) Navigation.NavigateTo($"/{Pluralize.Pluralize(projectionType.Name)}", false);
+        if(projectionType != null) Navigation.NavigateTo($"/projections/{Pluralize.Pluralize(projectionType.Name)}", false);
     }
 
     protected override void OnParametersSet()
@@ -193,12 +221,46 @@ else
             projectionTypeName = ProjectionTypeName;
             if(!string.IsNullOrWhiteSpace(projectionTypeName)) Store.SetProjectionTypeName(projectionTypeName);
         }
+        if (projection?["_id"]?.ToString() != ProjectionId)
+        {
+            Store.SetProjectionId(ProjectionId);
+        }
+        if (queryOptions?.Limit != Limit)
+        {
+            Store.SetLimit(Limit);
+        }
+        if (queryOptions?.Skip != Skip)
+        {
+            Store.SetSkip(Skip);
+        }
+        if (queryOptions?.Search != Search)
+        {
+            Store.SetSearchTerm(Search);
+        }
+        if (queryOptions?.OrderBy != OrderBy)
+        {
+            Store.SetOrderBy(OrderBy);
+        }
+        if (queryOptions?.Descending != Descending)
+        {
+            Store.SetDescending(Descending);
+        }
+        if (!(EncodeFilters(queryOptions?.Filters) ?? []).SequenceEqual(Filters ?? []))
+        {
+            Store.ParseQueryFilters(Filters);
+        }
         base.OnParametersSet();
+    }
+
+    string[]? EncodeFilters(Dictionary<string, string>? filters)
+    {
+        if (filters == null) return null;
+        return filters.Select((kvp) => $"{kvp.Key.Replace(":", @"\:")}:{kvp.Value}").ToArray();
     }
 
     void OnCreateProjectionType()
     {
-        Navigation.NavigateTo("/projections/types/new", false);
+        Navigation.NavigateTo("/types/new", false);
     }
 
     async Task OnCreateProjectionAsync()

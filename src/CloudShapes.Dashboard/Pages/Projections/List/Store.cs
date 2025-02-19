@@ -33,6 +33,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// </summary>
     public Virtualize<IDictionary<string, object>>? Virtualize { get; set; }
 
+    #region Selectors
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe the <see cref="CloudEvent"/>s produced by Cloud Shapes
     /// </summary>
@@ -57,6 +58,11 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.ProjectionTypes"/> changes
     /// </summary>
     public IObservable<EquatableList<ProjectionType>?> ProjectionTypes => this.Select(state => state.ProjectionTypes).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.ProjectionId"/> changes
+    /// </summary>
+    public IObservable<string?> ProjectionId => this.Select(state => state.ProjectionId).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Projections"/> changes
@@ -91,12 +97,21 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Descending"/> changes
     /// </summary>
-    public IObservable<bool> Descending => this.Select(state => state.Descending).DistinctUntilChanged();
+    public IObservable<bool?> Descending => this.Select(state => state.Descending).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionListState.Filters"/> changes
     /// </summary>
     public IObservable<EquatableDictionary<string, string>?> Filters => this.Select(state => state.Filters).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe the active projection
+    /// </summary>
+    public IObservable<IDictionary<string, object>?> Projection => Observable.CombineLatest(
+        ProjectionId,
+        Projections,
+        (projectionId, projections) => projectionId == null ? null : projections?.Items.FirstOrDefault(p => (string)p["_id"] == projectionId)
+    ).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe a derived <see cref="QueryOptions"/> changes
@@ -114,43 +129,15 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
                  Skip = skip,
                  Search = search,
                  OrderBy = orderBy,
-                 Descending = descending,
+                 Descending = descending ?? false,
                  Filters = filters?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
              }
         )
-        .Throttle(TimeSpan.FromMilliseconds(100))
+        .Throttle(TimeSpan.FromMilliseconds(1))
         .DistinctUntilChanged();
+    #endregion
 
-    /// <inheritdoc/>
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
-        await cloudEventHub.StartAsync().ConfigureAwait(false);
-        CloudEvents = cloudEventHub.Stream();
-        CloudEvents.Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type)).SubscribeAsync(async _ => await ListProjectionTypesAsync(), CancellationTokenSource.Token);
-        CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
-        Observable.CombineLatest(
-            _refresh,
-            ProjectionTypeName,
-            QueryOptions,
-            (_, typeName, queryOptions) => (typeName, queryOptions)
-        )
-            .Where(payload => {
-                var (typeName, _) = payload;
-                return Get().ProjectionTypes.Count >= 1 && Get().ProjectionType?.Name != typeName;
-            })
-            .Select(payload => payload.queryOptions)
-            .SubscribeAsync(async (queryOptions) => await ListProjectionsAsync(queryOptions), CancellationTokenSource.Token);
-        ProjectionTypeName.Subscribe(typeName =>
-        {
-            var projectionTypes = Get().ProjectionTypes;
-            if (Get().ProjectionTypes.Count < 1 || Get().ProjectionType?.Name == typeName) return;
-            SetProjectionType();
-        }, CancellationTokenSource.Token);
-        await ListProjectionTypesAsync();
-        SetLoading(false);
-    }
-
+    #region Setters
     /// <summary>
     /// Sets the <see cref="ProjectionListState.Loading"/>
     /// </summary>
@@ -172,6 +159,18 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         Reduce(state => state with
         {
             ProjectionTypeName = typeName
+        });
+    }
+
+    /// <summary>
+    /// Sets the <see cref="ProjectionListState.ProjectionId"/>
+    /// </summary>
+    /// <param name="projectionId">The type of the projections to list</param>
+    public void SetProjectionId(string? projectionId)
+    {
+        Reduce(state => state with
+        {
+            ProjectionId = projectionId
         });
     }
 
@@ -227,11 +226,46 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// Sets the <see cref="ProjectionListState.Descending"/>
     /// </summary>
     /// <param name="descending">The new value</param>
-    public void SetDescending(bool descending)
+    public void SetDescending(bool? descending)
     {
         Reduce(state => state with
         {
             Descending = descending
+        });
+    }
+
+    /// <summary>
+    /// Parses the query filters and adds them to <see cref="ProjectionListState.Filters"/>
+    /// </summary>
+    /// <param name="queryFilters">The query filters to parse and add</param>
+    public void ParseQueryFilters(string[]? queryFilters)
+    {
+        ClearFilters();
+        if (queryFilters == null) return;
+        foreach(var queryFilter in queryFilters)
+        {
+            int index = 0;
+            ReadOnlySpan<char> span = queryFilter;
+            while (index < span.Length)
+            {
+                if (span[index] == ':' && (index == 0 || span[index - 1] != '\\'))
+                    break;
+                index++;
+            }
+            string key = span.Slice(0, index).ToString().Replace(@"\:", ":");
+            string value = (index < span.Length) ? span.Slice(index + 1).ToString() : string.Empty;
+            AddFilter(key, value);
+        }
+    }
+
+    /// <summary>
+    /// Clears the filters
+    /// </summary>
+    public void ClearFilters()
+    {
+        Reduce(state => state with
+        {
+            Filters = new()
         });
     }
 
@@ -242,11 +276,13 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <param name="value">The value to add</param>
     public void AddFilter(string key, string value)
     {
-        var filters = Get().Filters ?? new();
-        filters.Add(key, value);
+        var filters = new EquatableDictionary<string, string>(Get().Filters ?? new())
+        {
+            { key, value }
+        };
         Reduce(state => state with
         {
-            Filters = new(filters)
+            Filters = filters
         });
     }
 
@@ -256,7 +292,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <param name="key">The key to remove</param>
     public void RemoveFilter(string key)
     {
-        var filters = Get().Filters ?? new();
+        var filters = new EquatableDictionary<string, string>(Get().Filters ?? new());
         if (!filters.ContainsKey(key)) return;
         filters.Remove(key);
         Reduce(state => state with
@@ -264,7 +300,9 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
             Filters = new(filters)
         });
     }
+    #endregion
 
+    #region Actions
     /// <summary>
     /// Lists available <see cref="ProjectionType"/>s
     /// </summary>
@@ -389,7 +427,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         {
             new()
             {
-                Href = $"/projections/types/new",
+                Href = $"/types/new",
                 IconName = IconName.PlusSquare,
                 Text = "New...",
                 Class = "border-bottom border-secondary-subtle"
@@ -400,7 +438,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
             var plural = pluralize.Pluralize(t.Name);
             return new NavItem()
             {
-                Href = $"/{plural.ToCamelCase()}",
+                Href = $"/projections/{plural.ToCamelCase()}",
                 IconName = IconName.Cast,
                 Text = $"{plural} ({t.Metadata.ProjectionCount})"
             };
@@ -417,6 +455,38 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     {
         var projections = Get().Projections;
         return ValueTask.FromResult(new ItemsProviderResult<IDictionary<string, object>>(projections?.Items ?? [], (int)(projections?.TotalCount ?? 0)));
+    }
+    #endregion
+
+    /// <inheritdoc/>
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+        await cloudEventHub.StartAsync().ConfigureAwait(false);
+        CloudEvents = cloudEventHub.Stream();
+        CloudEvents.Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type)).SubscribeAsync(async _ => await ListProjectionTypesAsync(), CancellationTokenSource.Token);
+        CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
+        Observable.CombineLatest(
+            _refresh,
+            ProjectionTypeName,
+            QueryOptions,
+            (_, typeName, queryOptions) => (typeName, queryOptions)
+        )
+            .Throttle(TimeSpan.FromMilliseconds(100))
+            .Where(payload => {
+                var (typeName, _) = payload;
+                return Get().ProjectionTypes.Count >= 1 && Get().ProjectionType?.Name != typeName;
+            })
+            .Select(payload => payload.queryOptions)
+            .SubscribeAsync(ListProjectionsAsync, CancellationTokenSource.Token);
+        ProjectionTypeName.Subscribe(typeName =>
+        {
+            var projectionTypes = Get().ProjectionTypes;
+            if (Get().ProjectionTypes.Count < 1 || Get().ProjectionType?.Name == typeName) return;
+            SetProjectionType();
+        }, CancellationTokenSource.Token);
+        await ListProjectionTypesAsync();
+        SetLoading(false);
     }
 
     /// <summary>

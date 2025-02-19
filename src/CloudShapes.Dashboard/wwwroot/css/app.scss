@@ -123,9 +123,7 @@ h1:focus {
 
 .bb-sidebar {
     --bb-sidebar-background-color: var(--bs-dark-bg-subtle);
-}
-
-.bb-sidebar-top-row {
+    --bb-sidebar-nav-item-background-hover-color: rgba(var(--bs-primary-rgb), 0.8);
     --bb-sidebar-top-row-background-color: var(--bs-dark-bg-subtle);
 }
 
@@ -155,10 +153,43 @@ td.fit, th.fit {
     display: none;
 }
 
+.offcanvas-header {
+    background: var(--bs-dark-bg-subtle);
+    height: 77px;
+    border-bottom: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
+    h5 {
+        margin: 0;
+    }
+}
+
 .card {
     &:has(> .collapse.show, .collapsing) {
         > .card-header .bi.bi-caret-right {
             transform: rotate(90deg);
+        }
+    }
+}
+
+.projection-details {
+    display: flex;
+    flex-grow: 1;
+
+    > div {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex-grow: 1;
+
+        .tab-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+
+            .tab-pane.active {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+            }
         }
     }
 }
