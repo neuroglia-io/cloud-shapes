@@ -13,41 +13,45 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 *@
-@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create
+@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Editor
 @page "/types/new"
+@page "/types/edit/{projectionTypeName}"
 @using CloudShapes.Integration.Commands.ProjectionTypes
-@inherits StatefulComponent<CreateProjectionTypeStore, CreateProjectionTypeState>
+@inherits StatefulComponent<ProjectionTypeEditorStore, ProjectionTypeEditorState>
 @inject NavigationManager Navigation
 
-<ApplicationTitle>New Projection Type</ApplicationTitle>
+<ApplicationTitle>@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type @(string.IsNullOrEmpty(projectionTypeName) ? "" : $" - {projectionTypeName}")</ApplicationTitle>
 
 <div class="p-3">
 
-    <h4 class="mb-4">New Projection Type</h4>
+    <h4 class="mb-4">@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type @(string.IsNullOrEmpty(projectionTypeName) ? "" : $" - {projectionTypeName}")</h4>
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
             <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
             <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
         </div>
-        <Collapse @ref="informationCollapsible" Toggle="true">
+        <Collapse @ref="informationCollapsible">
             <div class="card-body">
                 <div class="mb-3">
                     <label for="name" class="form-label">Name</label>
-                    <input name="name" type="text" class="form-control" placeholder="Name" value="@command.Name" @oninput="e => Store.SetProjectionTypeName((string?)e.Value)">
+                    <input name="name" type="text" class="form-control" placeholder="Name" readonly="@isEditing" value="@name" @oninput="e => Store.SetName((string?)e.Value)">
                 </div>
                 <div class="mb-3">
                     <label for="summary" class="form-label">Summary</label>
-                    <MarkdownInput Value="@command.Summary" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
+                    <MarkdownInput Value="@summary" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
                 </div>
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <MarkdownInput Value="@command.Description" Size="MarkdownInputSize.Small" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
+                    <MarkdownInput Value="@description" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
                 </div>
                 <div>
                     <div class="d-flex justify-content-between align-items-center">
                         <label for="tags" class="form-label">Tags</label>
-                        <button type="button" class="btn btn-sm btn-primary @(showTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
+                        @if (!isEditing)
+                        {
+                            <button type="button" class="btn btn-sm btn-primary @(showTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
+                        }
                     </div>
                     <table class="table">
                         <thead>
@@ -58,15 +62,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (command.Tags != null)
+                            @if (tags.Count > 0)
                             {
-                                foreach (var tag in command.Tags)
+                                foreach (var tag in tags)
                                 {
                                     <tr>
                                         <td>@tag.Key</td>
                                         <td>@tag.Value</td>
                                         <td class="text-end fit">
-                                            <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                                            @if (!isEditing)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -74,7 +81,10 @@
                             <tr class="@(showTagEditor == true ? "" : "d-none")">
                                 <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" @bind="tagKey" /></td>
                                 <td class="p-0"><input type="text" class="form-control" placeholder="Value" @bind="tagValue" /></td>
-                                <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
+                                @if (!isEditing)
+                                {
+                                    <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
+                                }
                             </tr>
                         </tbody>
                     </table>
@@ -90,21 +100,47 @@
         </div>
         <Collapse @ref="schemaCollapsible">
             <div class="card-body">
-                <div>
-                    <MonacoEditor @ref="schemaInput" OnTextChanged="value => Store.SetSchemaContent(value)" />
-                </div>
+                <MonacoEditor @ref="schemaInput" Document="originalSchema" OnTextChanged="Store.SetSerializedSchema" />
             </div>
         </Collapse>
     </div>
+
+    @if (isEditing)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleMigrationCollapsibleAsync">
+                <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                <Icon Name="IconName.DatabaseUp" Class="me-2" /><h6 class="mb-0">Migration</h6>
+            </div>
+            <Collapse @ref="migrationCollapsible">
+                <div class="card-body">
+                    <div class="my-3 d-flex align-items-center justify-content-between gap-3">
+                        <div class="form-floating">
+                            <select id="patch-type" class="form-select" @onchange="e => Store.SetMigrationPatchType((string)e.Value!)">
+                                <option value="@PatchType.JsonPatch">Json Patch</option>
+                                <option value="@PatchType.JsonMergePatch">Json Merge Patch</option>
+                                <option value="@PatchType.JsonStrategicMergePatch">Json Strategic Merge Patch</option>
+                            </select>
+                            <label class="form-label" for="patch-type">Patch Type</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input type="checkbox" id="validate-migration-switch" class="form-check-input" role="switch" value="true" checked="@validateMigration" @onchange="e => Store.SetValidateMigration((bool)e.Value!)">
+                            <label class="form-check-label" for="validate-migration-switch">Validate the projections of the updated type</label>
+                        </div>
+                    </div>
+                    <MonacoEditor OnTextChanged="Store.SetSerializedMigration" />
+                </div>
+            </Collapse>
+        </div>
+    }
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
             <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
             <Icon Name="IconName.LightningChargeFill" Class="me-2" /><h6 class="mb-0">Triggers</h6>
         </div>
-        <Collapse @ref="triggersCollapsible" Toggle="true">
+        <Collapse @ref="triggersCollapsible">
             <div class="card-body">
-
                 <div class="card mb-3">
                     <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
                         <div class="d-flex justify-content-between align-items-baseline">
@@ -113,10 +149,12 @@
                                 <Icon Name="IconName.PlusCircle" Class="me-2" />
                                 <div class="d-flex align-items-baseline justify-content-between w-100">
                                     <label class="form-label">Create Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Create.Count)</small>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Create.Count)</small>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            @if (!isEditing) { 
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            }
                         </div>
                     </div>
                     <Collapse @ref="createTriggersCollapsible">
@@ -131,18 +169,21 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var trigger in command.Triggers.Create)
+                                    @foreach (var trigger in triggers.Create)
                                     {
                                         <tr>
                                             <td><code>@trigger.Event.Type</code></td>
                                             <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
                                             <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
                                             <td class="text-end fit">
-                                                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                    <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveCreateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                </ul>
+                                                @if (!isEditing)
+                                                {
+                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveCreateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                    </ul>
+                                                }
                                             </td>
                                         </tr>
                                     }
@@ -160,10 +201,13 @@
                                 <Icon Name="IconName.ArrowClockwise" Class="me-2" />
                                 <div class="d-flex align-items-baseline justify-content-between w-100">
                                     <label for="tags" class="form-label">Update Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Update?.Count ?? 0)</small>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Update?.Count ?? 0)</small>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            @if (!isEditing)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            }
                         </div>
                     </div>
                     <Collapse @ref="updateTriggersCollapsible">
@@ -179,9 +223,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if(command.Triggers.Update != null)
+                                    @if(triggers.Update != null)
                                     {
-                                        foreach(var trigger in command.Triggers.Update)
+                                        foreach(var trigger in triggers.Update)
                                         {
                                             <tr>
                                                 <td><code>@trigger.Event.Type</code></td>
@@ -189,11 +233,14 @@
                                                 <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
                                                 <td class="text-center"><span class="border border-primary rounded-pill badge text-primary">@trigger.Strategy</span></td>
                                                 <td class="text-end fit">
-                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveUpdateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                    </ul>
+                                                    @if (!isEditing)
+                                                    {
+                                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveUpdateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                        </ul>
+                                                    }
                                                 </td>
                                             </tr>
                                         }
@@ -212,10 +259,13 @@
                                 <Icon Name="IconName.XCircle" Class="me-2" />
                                 <div class="d-flex align-items-baseline justify-content-between w-100">
                                     <label for="tags" class="form-label">Delete Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Triggers.Delete?.Count ?? 0)</small>
+                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Delete?.Count ?? 0)</small>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            @if (!isEditing)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                            }
                         </div>
                     </div>
                     <Collapse @ref="deleteTriggersCollapsible">
@@ -230,20 +280,23 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (command.Triggers.Delete != null)
+                                    @if (triggers.Delete != null)
                                     {
-                                        foreach (var trigger in command.Triggers.Delete)
+                                        foreach (var trigger in triggers.Delete)
                                         {
                                             <tr>
                                                 <td><code>@trigger.Event.Type</code></td>
                                                 <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
                                                 <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
                                                 <td class="text-end fit">
-                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveDeleteTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                    </ul>
+                                                    @if (!isEditing)
+                                                    {
+                                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveDeleteTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                        </ul>
+                                                    }
                                                 </td>
                                             </tr>
                                         }
@@ -265,10 +318,13 @@
                 <Icon Name="IconName.Link" Class="me-2" />
                 <div class="d-flex align-items-baseline justify-content-between w-100">
                     <h6 class="mb-0">Relationships</h6>
-                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Relationships?.Count ?? 0)</small>
+                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(relationships.Count)</small>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddRelationshipAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+            @if (!isEditing)
+            {
+                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddRelationshipAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+            }
         </div>
         <Collapse @ref="relationshipsCollapsible">
             <div class="card-body">
@@ -283,9 +339,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(command.Relationships != null)
+                        @if(relationships.Count > 0)
                         {
-                            foreach(var relationship in command.Relationships)
+                            foreach(var relationship in relationships)
                             {
                                 <tr>
                                     <td><span class="border border-primary badge text-primary">@relationship.Type</span></td>
@@ -293,11 +349,14 @@
                                     <td class="text-center"><code>@relationship.Key</code></td>
                                     <td class="text-center"><code>@relationship.Path</code></td>
                                     <td class="text-end fit">
-                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveRelationship(relationship)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                        </ul>
+                                        @if (!isEditing)
+                                        {
+                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveRelationship(relationship)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                            </ul>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -315,10 +374,13 @@
                 <Icon Name="IconName.ListOl" Class="me-2" />
                 <div class="d-flex align-items-baseline justify-content-between w-100">
                     <h6 class="mb-0">Indexes</h6>
-                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(command.Indexes?.Count ?? 0)</small>
+                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(indexes.Count)</small>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddIndexAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+            @if (!isEditing)
+            {
+                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddIndexAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+            }
         </div>
         <Collapse @ref="indexesCollapsible">
             <div class="card-body">
@@ -334,9 +396,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (command.Indexes != null)
+                        @if (indexes.Count > 0)
                         {
-                            foreach (var index in command.Indexes)
+                            foreach (var index in indexes)
                             {
                                 <tr>
                                     <td>@index.Name</td>
@@ -350,11 +412,14 @@
                                     <td class="text-center"><input type="checkbox" checked="@index.Descending" disabled class="form-check mx-auto" /></td>
                                     <td class="text-center"><input type="checkbox" checked="@index.Text" disabled class="form-check mx-auto" /></td>
                                     <td class="text-end fit">
-                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveIndex(index)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                        </ul>
+                                        @if (!isEditing)
+                                        {
+                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveIndex(index)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                            </ul>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -377,7 +442,7 @@
         </div>
     }
 
-    <button class="btn btn-primary w-100" @onclick="OnCreateProjectionTypeAsync" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Floppy" /> Create</button>
+    <button class="btn btn-primary w-100" @onclick="OnProjectionTypeEditorAsync"><Icon Name="IconName.Floppy" /> &nbsp; @(string.IsNullOrEmpty(projectionTypeName) ? "Create" : "Migrate")</button>
 
 </div>
 
@@ -388,6 +453,7 @@
     Collapse? informationCollapsible;
     Collapse? schemaCollapsible;
     MonacoEditor? schemaInput;
+    Collapse? migrationCollapsible;
     Collapse? triggersCollapsible;
     Collapse? createTriggersCollapsible;
     Collapse? updateTriggersCollapsible;
@@ -396,29 +462,73 @@
     Collapse? indexesCollapsible;
     Modal? modal;
     ConfirmDialog? dialog;
-    CreateProjectionTypeCommand command = new();
+    string? projectionTypeName;
+    string? name;
+    string? summary;
+    string? description;
+    JsonSchema? originalSchema;
+    JsonSchema? schema;
+    bool validateMigration = false;
+    string? serializedMigration;
+    ProjectionTriggerCollection triggers = new();
+    EquatableList<ProjectionIndexDefinition> indexes = [];
+    EquatableList<ProjectionRelationshipDefinition> relationships { get; set; } = [];
+    EquatableDictionary<string, string> tags { get; set; } = [];
     EquatableList<string> errors = [];
     bool showTagEditor;
     string? tagKey;
     string? tagValue;
 
+    bool isEditing => !string.IsNullOrEmpty(projectionTypeName);
+
+    [Parameter] public string? ProjectionTypeName { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        Store.Command.Subscribe(value =>
+        Store.ProjectionTypeName.SubscribeAsync(async value =>
         {
-            OnStateChanged(_ =>
+            OnStateChanged(_ => projectionTypeName = value);
+            if (!string.IsNullOrEmpty(value))
             {
-                command = value;
-            });
-        });
-        Store.Errors.Subscribe(value =>
+                if (schemaCollapsible != null) await schemaCollapsible.ShowAsync();
+                if (migrationCollapsible != null) await migrationCollapsible.ShowAsync();
+            }
+            else
+            {
+                if (informationCollapsible != null) await informationCollapsible.ShowAsync();
+                if (triggersCollapsible != null) await triggersCollapsible.ShowAsync();
+            }
+            OnStateChanged(_ => { });
+        }, CancellationTokenSource.Token);
+        Store.Name.Subscribe(value => OnStateChanged(_ => name = value), CancellationTokenSource.Token);
+        Store.Summary.Subscribe(value => OnStateChanged(_ => summary = value), CancellationTokenSource.Token);
+        Store.Description.Subscribe(value => OnStateChanged(_ => description = value), CancellationTokenSource.Token);
+        Store.OriginalSchema.Subscribe(value => OnStateChanged(_ => originalSchema = value), CancellationTokenSource.Token);
+        Store.Schema.Subscribe(value => OnStateChanged(_ => schema = value), CancellationTokenSource.Token);
+        Store.ValidateMigration.Subscribe(value => OnStateChanged(_ => validateMigration = value), CancellationTokenSource.Token);
+        Store.SerializedMigration.Subscribe(value => OnStateChanged(_ => serializedMigration = value), CancellationTokenSource.Token);
+        Store.Triggers.Subscribe(value => OnStateChanged(_ => triggers = value), CancellationTokenSource.Token);
+        Store.Indexes.Subscribe(value => OnStateChanged(_ => indexes = value), CancellationTokenSource.Token);
+        Store.Relationships.Subscribe(value => OnStateChanged(_ => relationships = value), CancellationTokenSource.Token);
+        Store.Tags.Subscribe(value => OnStateChanged(_ => tags = value), CancellationTokenSource.Token);
+        Store.Errors.Subscribe(value => OnStateChanged(_ => errors = value), CancellationTokenSource.Token);
+        Store.Sent.Subscribe(_ =>
         {
-            OnStateChanged(_ =>
+            if (string.IsNullOrEmpty(ProjectionTypeName))
             {
-                errors = value;
-            });
-        });
+                Navigation.NavigateTo("/types", false);
+            }
+        }, CancellationTokenSource.Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionTypeName != ProjectionTypeName)
+        {
+            Store.SetProjectionTypeName(ProjectionTypeName);
+        }
+        base.OnParametersSet();
     }
 
     async Task OnToggleInformationCollapsibleAsync()
@@ -431,6 +541,12 @@
     {
         if (schemaCollapsible == null) return;
         await schemaCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleMigrationCollapsibleAsync()
+    {
+        if (migrationCollapsible == null) return;
+        await migrationCollapsible.ToggleAsync();
     }
 
     async Task OnToggleTriggersCollapsibleAsync()
@@ -471,10 +587,7 @@
 
     void OnAddTag()
     {
-        OnStateChanged(_ =>
-        {
-            showTagEditor = true;
-        });
+        OnStateChanged(_ => showTagEditor = true);
     }
 
     void OnConfirmAddTag()
@@ -491,9 +604,8 @@
 
     void OnRemoveTag(string key)
     {
-        if (command.Tags == null) return;
+        if (tags.Count == 0) return;
         Store.RemoveTagFromProjectionType(key);
-        if (command.Tags.Count < 1) command.Tags = null;
     }
 
     async Task OnAddCreateTriggerAsync()
@@ -548,7 +660,7 @@
     {
         if (modal == null) return;
         var parameters = new Dictionary<string, object>();
-        parameters[nameof(RelationshipEditorModal.Schema)] = command.Schema;
+        parameters[nameof(RelationshipEditorModal.Schema)] = schema;
         parameters[nameof(RelationshipEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
         {
             await modal.HideAsync();
@@ -565,7 +677,7 @@
     {
         if (modal == null) return;
         var parameters = new Dictionary<string, object>();
-        parameters[nameof(IndexEditorModal.Schema)] = command.Schema;
+        parameters[nameof(IndexEditorModal.Schema)] = schema;
         parameters[nameof(IndexEditorModal.OnCancel)] = EventCallback.Factory.Create(this, async _ =>
         {
             await modal.HideAsync();
@@ -578,36 +690,42 @@
         await modal.ShowAsync<IndexEditorModal>("New index", null, parameters);
     }
 
-    async Task OnCreateProjectionTypeAsync()
+    async Task OnProjectionTypeEditorAsync()
     {
         Store.ClearErrors();
         var hasErrors = false;
-        if (string.IsNullOrWhiteSpace(command.Name))
+        if (string.IsNullOrWhiteSpace(name))
         {
             Store.AddError("<b>Name</b> must be set");
             hasErrors = true;
         }
-        if (command.Schema == null)
+        if (schema == null)
         {
             Store.AddError("<b>Schema</b> must be set");
             hasErrors = true;
         }
         else
         {
-            var schemaType = command.Schema.GetJsonType();
+            var schemaType = schema.GetJsonType();
             if (schemaType.HasValue && schemaType.Value != SchemaValueType.Object)
             {
                 Store.AddError("<b>Schema</b> must define an object");
                 hasErrors = true;
             }
         }
-        if (command.Triggers.Create.Count < 1)
+        if (triggers.Create.Count < 1)
         {
             Store.AddError("At least one <b>Create</b> trigger is required");
             hasErrors = true;
         }
+        if (isEditing) {
+            if (string.IsNullOrEmpty(serializedMigration)) {
+                Store.AddError("<b>Migration</b> must be set");
+                hasErrors = true;
+            }
+        }
         if (hasErrors) return;
-        var properties = command.Schema!.GetProperties();
+        var properties = schema!.GetProperties();
         if (dialog != null && (properties == null || properties.Count < 1)) 
         {
             var confirmation = await dialog.ShowAsync(
@@ -624,7 +742,7 @@
             );
             if (!confirmation) return;
         }
-        if (await Store.CreateProjectionTypeAsync()) Navigation.NavigateTo("/types", false);
+        Store.Send();
     }
 
 }

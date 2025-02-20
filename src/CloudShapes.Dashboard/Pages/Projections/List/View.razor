@@ -33,7 +33,7 @@ else
     if (projectionType == null)
     {
         <p class="text-muted text-center my-auto">
-            No projection types are currently defined. <a class="fw-bold" role="button" @onclick="OnCreateProjectionType" @onclick:preventDefault="true" @onclick:stopPropagation="true">Click here</a> to create one.
+            No projection types are currently defined. <a class="fw-bold" role="button" @onclick="OnProjectionTypeEditor" @onclick:preventDefault="true" @onclick:stopPropagation="true">Click here</a> to create one.
         </p>
     }
     else
@@ -258,7 +258,7 @@ else
         return filters.Select((kvp) => $"{kvp.Key.Replace(":", @"\:")}:{kvp.Value}").ToArray();
     }
 
-    void OnCreateProjectionType()
+    void OnProjectionTypeEditor()
     {
         Navigation.NavigateTo("/types/new", false);
     }

@@ -16,7 +16,7 @@
 @namespace CloudShapes.Dashboard.Layout
 @inherits LayoutComponentBase
 @inject IOptions<ApplicationOptions> Options
-@inject NavigationManager NavigationManager
+@inject NavigationManager Navigation
 @inject JSInterop JsInterop
 @inject ILocalStorage Storage
 @inject IMonacoEditorHelper MonacoEditorHelper
@@ -32,17 +32,17 @@
         <nav class="navbar-collapse">
             <ul class="navbar-nav">    
                 <li class="dropdown">
-                    <button class="btn nav-link dropdown-toggle @(IsActive("", NavLinkMatch.All) || IsActive("projections", NavLinkMatch.Prefix) ? "active" : "")" type="button" id="projectionDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn nav-link dropdown-toggle @(IsActive("", NavLinkMatch.All) || IsActive("projections", NavLinkMatch.Prefix) || IsActive("types", NavLinkMatch.Prefix) ? "active" : "")" type="button" id="projectionDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="btn-label">Projections</span>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="projectionDropdownButton">
                         <li>
-                            <NavLink class="nav-link" href="projections" Match="NavLinkMatch.All">
+                            <NavLink class="nav-link" href="/projections" Match="NavLinkMatch.All">
                                 <span class="btn-label">Explore</span>
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink class="nav-link" href="projections/types" Match="NavLinkMatch.All">
+                            <NavLink class="nav-link" href="/types" Match="NavLinkMatch.All">
                                 <span class="btn-label">Types</span>
                             </NavLink>
                         </li>
@@ -89,7 +89,7 @@
 
     bool IsActive(string href, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix)
     {
-        var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).ToLower();
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).ToLower();
         return navLinkMatch == NavLinkMatch.All ? relativePath == href.ToLower() : relativePath.StartsWith(href.ToLower());
     }
 
