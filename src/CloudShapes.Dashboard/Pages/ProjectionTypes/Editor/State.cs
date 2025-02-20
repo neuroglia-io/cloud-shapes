@@ -64,7 +64,7 @@ public record ProjectionTypeEditorState
     /// <summary>
     /// Gets/sets the type of the migration patch
     /// </summary>
-    public string? MigrationPatchType { get; set; } = null;
+    public string MigrationPatchType { get; set; } = PatchType.JsonPatch;
 
     /// <summary>
     /// Gets/sets the migration patch that transforms the state of projections of this type from the previous schema to the current schema

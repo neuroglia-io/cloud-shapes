@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using CloudShapes.Dashboard.Components.ProjectionDetailsStateManagement;
+using CloudShapes.Data.Models;
 using CloudShapes.Integration.Commands.ProjectionTypes;
 
 namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Editor;
@@ -18,11 +20,12 @@ namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Editor;
 /// <summary>
 /// Represents the store the the create projection type view
 /// </summary>
+/// <param name="logger">The service used to perform logging</param>
 /// <param name="cloudShapesApi">The service used to interact with the Cloud Shapes API</param>
 /// <param name="monacoEditorHelper">The service used to to facilitate the Monaco editor configuration</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 /// <param name="yamlSerializer">The service used to serialize/deserialize data to/from YAML</param>
-public class ProjectionTypeEditorStore(ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
+public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger, ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
     : ComponentStore<ProjectionTypeEditorState>(new())
 {
 
@@ -122,8 +125,9 @@ public class ProjectionTypeEditorStore(ICloudShapesApiClient cloudShapesApi, IMo
                 : serializer.Deserialize<JsonSchema>(content)!;
             return schema;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError($"Failed to deserialize schema: {ex.ToString()}");
             return null;
         }
     }).DistinctUntilChanged();
@@ -146,14 +150,21 @@ public class ProjectionTypeEditorStore(ICloudShapesApiClient cloudShapesApi, IMo
     /// <summary>
     /// Gets the <see cref="IObservable{T}"/>  used to observe a derived <see cref="Patch"/> to migrate the <see cref="ProjectionType"/>'s schema
     /// </summary>
-    public IObservable<Patch> Migration => Observable.CombineLatest(
+    public IObservable<Patch?> Migration => Observable.CombineLatest(
         MigrationPatchType.Where(type => !string.IsNullOrWhiteSpace(type)),
         SerializedMigration.Where(migration => !string.IsNullOrWhiteSpace(migration)),
         (type, migration) =>
         {
-            var serializer = monacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)jsonSerializer : yamlSerializer;
-            var document = serializer.Deserialize<object>(migration!)!;
-            return new Patch(type!, document);
+            try { 
+                var serializer = monacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)jsonSerializer : yamlSerializer;
+                var document = serializer.Deserialize<object>(migration!)!;
+                return new Patch(type!, document);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Failed to deserialize migration: {ex.ToString()}");
+                return null;
+            }
         }
     ).DistinctUntilChanged();
     #endregion
@@ -572,35 +583,39 @@ public class ProjectionTypeEditorStore(ICloudShapesApiClient cloudShapesApi, IMo
                 SetOriginalProjectionType(projectionType);
                 SetProjectionTypeProperties(projectionType);
             }, CancellationTokenSource.Token);
-        Observable.CombineLatest(
-            _send,
-            ProjectionTypeName.Where(name => string.IsNullOrEmpty(name)),
-            ProjectionType,
-            (_, name, projectionType) => new CreateProjectionTypeCommand()
-            {
-                Name = projectionType.Name,
-                Summary = projectionType.Summary,
-                Description = projectionType.Description,
-                Schema = projectionType.Schema,
-                Triggers = projectionType.Triggers,
-                Indexes = projectionType.Indexes,
-                Relationships = projectionType.Relationships,
-                Tags = projectionType.Tags
-            }
+        _send.WithLatestFrom(
+            Observable.CombineLatest(
+                ProjectionTypeName.Where(name => string.IsNullOrEmpty(name)),
+                ProjectionType,
+                (_, projectionType) => new CreateProjectionTypeCommand()
+                {
+                    Name = projectionType.Name,
+                    Summary = projectionType.Summary,
+                    Description = projectionType.Description,
+                    Schema = projectionType.Schema,
+                    Triggers = projectionType.Triggers,
+                    Indexes = projectionType.Indexes,
+                    Relationships = projectionType.Relationships,
+                    Tags = projectionType.Tags
+                }
+            ),
+            (_, command) => command
         ).SubscribeAsync(CreateProjectionTypeAsync, CancellationTokenSource.Token);
+        _send.WithLatestFrom(
         Observable.CombineLatest(
-            _send,
-            ProjectionTypeName.Where(name => !string.IsNullOrEmpty(name)),
-            Schema,
-            Migration,
-            ValidateMigration,
-            (_, name, schema, migration, validateMigration) => new MigrateProjectionTypeSchemaCommand()
-            {
-                Name = name,
-                Schema = schema,
-                Migration = migration,
-                Validate = validateMigration
-            }
+                ProjectionTypeName.Where(name => !string.IsNullOrEmpty(name)),
+                Schema.Where(schema => schema != null),
+                Migration,
+                ValidateMigration,
+                (name, schema, migration, validateMigration) => new MigrateProjectionTypeSchemaCommand()
+                {
+                    Name = name!,
+                    Schema = schema!,
+                    Migration = migration,
+                    Validate = validateMigration
+                }
+            ),
+            (_, command) => command
         ).SubscribeAsync(MigrateProjectionTypeAsync, CancellationTokenSource.Token);
     }
 

@@ -20,18 +20,18 @@
 @inherits StatefulComponent<ProjectionTypeEditorStore, ProjectionTypeEditorState>
 @inject NavigationManager Navigation
 
-<ApplicationTitle>@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type</ApplicationTitle>
+<ApplicationTitle>@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type @(string.IsNullOrEmpty(projectionTypeName) ? "" : $" - {projectionTypeName}")</ApplicationTitle>
 
 <div class="p-3">
 
-    <h4 class="mb-4">@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type</h4>
+    <h4 class="mb-4">@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type @(string.IsNullOrEmpty(projectionTypeName) ? "" : $" - {projectionTypeName}")</h4>
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
             <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
             <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
         </div>
-        <Collapse @ref="informationCollapsible" Toggle="true">
+        <Collapse @ref="informationCollapsible">
             <div class="card-body">
                 <div class="mb-3">
                     <label for="name" class="form-label">Name</label>
@@ -101,30 +101,38 @@
         <Collapse @ref="schemaCollapsible">
             <div class="card-body">
                 <MonacoEditor @ref="schemaInput" Document="originalSchema" OnTextChanged="Store.SetSerializedSchema" />
-                @if(isEditing)
-                {
-                    <div class="mt-3">
-                        <label><Icon Name="IconName.DatabaseUp" /> &nbsp; Migration</label>
-                        <div class="my-3 d-flex align-items-center justify-content-between gap-3">
-                            <div class="form-floating">
-                                <select name="patch.type" class="form-select" @onchange="e => Store.SetMigrationPatchType((string)e.Value!)">
-                                    <option value="json">Json Patch</option>
-                                    <option value="merge">Json Merge Patch</option>
-                                    <option value="strategic">Json Strategic Merge Patch</option>
-                                </select>
-                                <label class="form-label">Patch Type</label>
-                            </div>
-                            <div class="form-check form-switch">
-                                <input type="checkbox" id="validate-migration-switch" class="form-check-input" role="switch" value="true" checked="@validateMigration" @onchange="e => Store.SetValidateMigration(bool.Parse((string)e.Value!))">
-                                <label class="form-check-label" for="validate-migration-switch">Validate the projections of the updated type</label>
-                            </div>
-                        </div>
-                        <MonacoEditor OnTextChanged="Store.SetSerializedMigration" />
-                    </div>
-                }
             </div>
         </Collapse>
     </div>
+
+    @if (isEditing)
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleMigrationCollapsibleAsync">
+                <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                <Icon Name="IconName.DatabaseUp" Class="me-2" /><h6 class="mb-0">Migration</h6>
+            </div>
+            <Collapse @ref="migrationCollapsible">
+                <div class="card-body">
+                    <div class="my-3 d-flex align-items-center justify-content-between gap-3">
+                        <div class="form-floating">
+                            <select id="patch-type" class="form-select" @onchange="e => Store.SetMigrationPatchType((string)e.Value!)">
+                                <option value="@PatchType.JsonPatch">Json Patch</option>
+                                <option value="@PatchType.JsonMergePatch">Json Merge Patch</option>
+                                <option value="@PatchType.JsonStrategicMergePatch">Json Strategic Merge Patch</option>
+                            </select>
+                            <label class="form-label" for="patch-type">Patch Type</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input type="checkbox" id="validate-migration-switch" class="form-check-input" role="switch" value="true" checked="@validateMigration" @onchange="e => Store.SetValidateMigration((bool)e.Value!)">
+                            <label class="form-check-label" for="validate-migration-switch">Validate the projections of the updated type</label>
+                        </div>
+                    </div>
+                    <MonacoEditor OnTextChanged="Store.SetSerializedMigration" />
+                </div>
+            </Collapse>
+        </div>
+    }
 
     <div class="card mb-3">
         <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
@@ -133,7 +141,6 @@
         </div>
         <Collapse @ref="triggersCollapsible">
             <div class="card-body">
-
                 <div class="card mb-3">
                     <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
                         <div class="d-flex justify-content-between align-items-baseline">
@@ -446,6 +453,7 @@
     Collapse? informationCollapsible;
     Collapse? schemaCollapsible;
     MonacoEditor? schemaInput;
+    Collapse? migrationCollapsible;
     Collapse? triggersCollapsible;
     Collapse? createTriggersCollapsible;
     Collapse? updateTriggersCollapsible;
@@ -461,6 +469,7 @@
     JsonSchema? originalSchema;
     JsonSchema? schema;
     bool validateMigration = false;
+    string? serializedMigration;
     ProjectionTriggerCollection triggers = new();
     EquatableList<ProjectionIndexDefinition> indexes = [];
     EquatableList<ProjectionRelationshipDefinition> relationships { get; set; } = [];
@@ -477,14 +486,20 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        Store.ProjectionTypeName.SubscribeAsync(async value => {
+        Store.ProjectionTypeName.SubscribeAsync(async value =>
+        {
+            OnStateChanged(_ => projectionTypeName = value);
             if (!string.IsNullOrEmpty(value))
             {
                 if (schemaCollapsible != null) await schemaCollapsible.ShowAsync();
-                if (informationCollapsible != null) await informationCollapsible.HideAsync();
-                if (triggersCollapsible != null) await triggersCollapsible.HideAsync();
+                if (migrationCollapsible != null) await migrationCollapsible.ShowAsync();
             }
-            OnStateChanged(_ => projectionTypeName = value);
+            else
+            {
+                if (informationCollapsible != null) await informationCollapsible.ShowAsync();
+                if (triggersCollapsible != null) await triggersCollapsible.ShowAsync();
+            }
+            OnStateChanged(_ => { });
         }, CancellationTokenSource.Token);
         Store.Name.Subscribe(value => OnStateChanged(_ => name = value), CancellationTokenSource.Token);
         Store.Summary.Subscribe(value => OnStateChanged(_ => summary = value), CancellationTokenSource.Token);
@@ -492,6 +507,7 @@
         Store.OriginalSchema.Subscribe(value => OnStateChanged(_ => originalSchema = value), CancellationTokenSource.Token);
         Store.Schema.Subscribe(value => OnStateChanged(_ => schema = value), CancellationTokenSource.Token);
         Store.ValidateMigration.Subscribe(value => OnStateChanged(_ => validateMigration = value), CancellationTokenSource.Token);
+        Store.SerializedMigration.Subscribe(value => OnStateChanged(_ => serializedMigration = value), CancellationTokenSource.Token);
         Store.Triggers.Subscribe(value => OnStateChanged(_ => triggers = value), CancellationTokenSource.Token);
         Store.Indexes.Subscribe(value => OnStateChanged(_ => indexes = value), CancellationTokenSource.Token);
         Store.Relationships.Subscribe(value => OnStateChanged(_ => relationships = value), CancellationTokenSource.Token);
@@ -525,6 +541,12 @@
     {
         if (schemaCollapsible == null) return;
         await schemaCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleMigrationCollapsibleAsync()
+    {
+        if (migrationCollapsible == null) return;
+        await migrationCollapsible.ToggleAsync();
     }
 
     async Task OnToggleTriggersCollapsibleAsync()
@@ -695,6 +717,12 @@
         {
             Store.AddError("At least one <b>Create</b> trigger is required");
             hasErrors = true;
+        }
+        if (isEditing) {
+            if (string.IsNullOrEmpty(serializedMigration)) {
+                Store.AddError("<b>Migration</b> must be set");
+                hasErrors = true;
+            }
         }
         if (hasErrors) return;
         var properties = schema!.GetProperties();
