@@ -11,14 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson;
-using Neuroglia.Data;
-using Json.Patch;
-using static CloudShapes.Data.RuntimeExpressions;
-using System.Threading;
-using Neuroglia.Data.Expressions.Services;
-using Neuroglia.Data.Expressions;
+using MongoDB.Bson.Serialization.Serializers;
 
 var builder = WebApplication.CreateBuilder(args);
 
