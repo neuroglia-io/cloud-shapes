@@ -293,8 +293,8 @@ public class Repository
             { RuntimeExpressions.Arguments.State, projectionState }
         };
         var patchHandler = PatchHandlers.FirstOrDefault(h => h.Supports(patch.Type)) ?? throw new ProblemDetailsException(new(Problems.Types.UnsupportedPatchType, Problems.Titles.UnsupportedPatchType, Problems.Statuses.Unprocessable, StringFormatter.Format(Problems.Details.UnsupportedPatchType, patch.Type)));
-        var patchDocument = await ExpressionEvaluator.EvaluateAsync(patch.Document, new { }, arguments, cancellationToken: cancellationToken).ConfigureAwait(false);
-        projectionState = await patchHandler.ApplyPatchAsync(patch.Document, projectionState, cancellationToken).ConfigureAwait(false);
+        var patchDocument = (await ExpressionEvaluator.EvaluateAsync(patch.Document, new { }, arguments, cancellationToken: cancellationToken).ConfigureAwait(false))!;
+        projectionState = await patchHandler.ApplyPatchAsync(patchDocument, projectionState, cancellationToken).ConfigureAwait(false);
         return await UpdateAsync(JsonSerializer.SerializeToBsonDocument(projectionState)!, cancellationToken).ConfigureAwait(false);
     }
 
