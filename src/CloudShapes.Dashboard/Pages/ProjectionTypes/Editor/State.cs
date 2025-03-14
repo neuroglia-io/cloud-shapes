@@ -20,9 +20,9 @@ public record ProjectionTypeEditorState
 {
 
     /// <summary>
-    /// Gets/sets a boolean indicating whether or not the view is loading
+    /// Gets/sets the current <see cref="PageStatus"/>
     /// </summary>
-    public bool Loading { get; set; } = false;
+    public string Status { get; set; } = PageStatus.Pending;
 
     /// <summary>
     /// Gets/sets the name of the <see cref="ProjectionType"/> to edit, if any
@@ -100,5 +100,25 @@ public record ProjectionTypeEditorState
     /// Gets/sets a list containing the errors that have occurred during the validation or the creation of the projection type
     /// </summary>
     public EquatableList<string> Errors { get; set; } = [];
+
+    /// <summary>
+    /// Gets/sets the outcome of a migration
+    /// </summary>
+    public string? MigrationOutcome { get; set; }
+
+    /// <summary>
+    /// Gets/sets the warning resulting of a migration
+    /// </summary>
+    public EquatableList<string> MigrationWarnings { get; set; } = [];
+
+    /// <summary>
+    /// Gets/set the validation errors of a migration
+    /// </summary>
+    public EquatableList<ProjectionValidationResult> MigrationValidationErrors {  get; set; } = [];
+
+    /// <summary>
+    /// Gets/sets the number of projections affected by a migration
+    /// </summary>
+    public long ProcessedProjections { get; set; } = 0;
 
 }

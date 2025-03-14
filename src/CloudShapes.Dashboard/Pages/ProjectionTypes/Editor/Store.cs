@@ -28,16 +28,11 @@ namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Editor;
 public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger, ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
     : ComponentStore<ProjectionTypeEditorState>(new())
 {
-
-    bool _disposed;
-    readonly Subject<System.Reactive.Unit> _send = new();
-    readonly Subject<System.Reactive.Unit> _sent = new();
-
     #region Selectors
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.Loading"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.Status"/> changes
     /// </summary>
-    public IObservable<bool> Loading => this.Select(state => state.Loading).DistinctUntilChanged();
+    public IObservable<string> Status => this.Select(state => state.Status).DistinctUntilChanged();
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.ProjectionTypeName"/> changes
@@ -110,14 +105,30 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
     public IObservable<EquatableList<string>> Errors => this.Select(state => state.Errors).DistinctUntilChanged();
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe whenever the <see cref="ProjectionType"/> has been successfully sent to the server
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.MigrationOutcome"/> changes
     /// </summary>
-    public IObservable<System.Reactive.Unit> Sent => _sent.AsObservable();
+    public IObservable<string?> MigrationOutcome => this.Select(state => state.MigrationOutcome).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.MigrationWarnings"/> changes
+    /// </summary>
+    public IObservable<EquatableList<string>> MigrationWarnings => this.Select(state => state.MigrationWarnings).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.MigrationValidationErrors"/> changes
+    /// </summary>
+    public IObservable<EquatableList<ProjectionValidationResult>> MigrationValidationErrors => this.Select(state => state.MigrationValidationErrors).DistinctUntilChanged();
+
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeEditorState.ProcessedProjections"/> changes
+    /// </summary>
+    public IObservable<long> ProcessedProjections => this.Select(state => state.ProcessedProjections).DistinctUntilChanged();
+
 
     /// <summary>
     /// Gets an <see cref="IObservable{T}"/> used to observe the deserialized  <see cref="ProjectionType"/>'s schema
     /// </summary>
-    public IObservable<JsonSchema?> Schema => SerializedSchema.Select(content => {
+    public IObservable<JsonSchema?> Schema => SerializedSchema.Throttle(TimeSpan.FromMilliseconds(300)).Select(content => {
         try { 
             var serializer = monacoEditorHelper.PreferredLanguage == PreferredLanguage.JSON ? (ITextSerializer)jsonSerializer : yamlSerializer;
             var schema = string.IsNullOrWhiteSpace(content)
@@ -523,7 +534,6 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
             Errors = []
         });
     }
-
     #endregion
 
     #region Actions
@@ -532,7 +542,21 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
     /// </summary>
     public void Send()
     {
-        _send.OnNext(System.Reactive.Unit.Default);
+        Reduce(state => state with
+        {
+            Status = PageStatus.Sending
+        });
+    }
+
+    /// <summary>
+    /// Ends the user interaction
+    /// </summary>
+    public void Complete()
+    {
+        Reduce(state => state with
+        {
+            Status = PageStatus.Completed
+        });
     }
 
     /// <summary>
@@ -545,11 +569,15 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
         try
         {
             await cloudShapesApi.ProjectionTypes.CreateAsync(command, CancellationTokenSource.Token);
-            _sent.OnNext(System.Reactive.Unit.Default);
+            Complete();
         }
         catch (Exception ex)
         {
             AddError(ex.Message);
+            Reduce(state => state with
+            {
+                Status = PageStatus.Pending
+            });
         }
     }
 
@@ -562,19 +590,38 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
     {
         try
         {
-            var ProjectionTypeSchemaMigrationResult = await cloudShapesApi.ProjectionTypes.MigrateSchemaAsync(command, CancellationTokenSource.Token);
-            _sent.OnNext(System.Reactive.Unit.Default);
+            Reduce(state => state with
+            {
+                MigrationOutcome = null,
+                MigrationWarnings = [],
+                MigrationValidationErrors = [],
+                ProcessedProjections = 0
+            });
+            //await Task.Delay(TimeSpan.FromMilliseconds(1)); //tick ?
+            var result = await cloudShapesApi.ProjectionTypes.MigrateSchemaAsync(command, CancellationTokenSource.Token);
+            Reduce(state => state with
+            {
+                MigrationOutcome = result.Outcome,
+                MigrationWarnings = result.Warnings ?? [],
+                MigrationValidationErrors = result.ValidationErrors ?? [],
+                ProcessedProjections = result.ProcessedProjections,
+                Status = PageStatus.Pending
+            });
         }
         catch (ProblemDetailsException ex)
         {
             AddError(ex.Message);
+            Reduce(state => state with
+            {
+                Status = PageStatus.Pending
+            });
         }
     }
     #endregion
 
     /// <inheritdoc/>
     public override async Task InitializeAsync()
-    {
+    { 
         await base.InitializeAsync();
         ProjectionTypeName
             .Where(name => !string.IsNullOrEmpty(name))
@@ -583,55 +630,45 @@ public class ProjectionTypeEditorStore(ILogger<ProjectionTypeEditorStore> logger
                 SetOriginalProjectionType(projectionType);
                 SetProjectionTypeProperties(projectionType);
             }, CancellationTokenSource.Token);
-        _send.WithLatestFrom(
-            Observable.CombineLatest(
-                ProjectionTypeName.Where(name => string.IsNullOrEmpty(name)),
-                ProjectionType,
-                (_, projectionType) => new CreateProjectionTypeCommand()
-                {
-                    Name = projectionType.Name,
-                    Summary = projectionType.Summary,
-                    Description = projectionType.Description,
-                    Schema = projectionType.Schema,
-                    Triggers = projectionType.Triggers,
-                    Indexes = projectionType.Indexes,
-                    Relationships = projectionType.Relationships,
-                    Tags = projectionType.Tags
-                }
-            ),
-            (_, command) => command
-        ).SubscribeAsync(CreateProjectionTypeAsync, CancellationTokenSource.Token);
-        _send.WithLatestFrom(
-        Observable.CombineLatest(
-                ProjectionTypeName.Where(name => !string.IsNullOrEmpty(name)),
-                Schema.Where(schema => schema != null),
-                Migration,
-                ValidateMigration,
-                (name, schema, migration, validateMigration) => new MigrateProjectionTypeSchemaCommand()
-                {
-                    Name = name!,
-                    Schema = schema!,
-                    Migration = migration,
-                    Validate = validateMigration
-                }
-            ),
-            (_, command) => command
-        ).SubscribeAsync(MigrateProjectionTypeAsync, CancellationTokenSource.Token);
-    }
-
-    /// <summary>
-    /// Disposes of the store
-    /// </summary>
-    /// <param name="disposing">A boolean indicating whether or not the dispose of the store</param>
-    protected override void Dispose(bool disposing)
-    {
-        if (!this._disposed)
-        {
-            if (disposing)
-            {
-                this._send.OnCompleted();
-            }
-            this._disposed = true;
-        }
+        Status
+            .Where(status => status ==  PageStatus.Sending)
+            .WithLatestFrom(
+                Observable.CombineLatest(
+                    ProjectionTypeName.Where(name => string.IsNullOrEmpty(name)),
+                    ProjectionType,
+                    (_, projectionType) => new CreateProjectionTypeCommand()
+                    {
+                        Name = projectionType.Name,
+                        Summary = projectionType.Summary,
+                        Description = projectionType.Description,
+                        Schema = projectionType.Schema,
+                        Triggers = projectionType.Triggers,
+                        Indexes = projectionType.Indexes,
+                        Relationships = projectionType.Relationships,
+                        Tags = projectionType.Tags
+                    }
+                ),
+                (_, command) => command
+            )
+            .SubscribeAsync(CreateProjectionTypeAsync, CancellationTokenSource.Token);
+        Status
+            .Where(status => status == PageStatus.Sending)
+            .WithLatestFrom(
+                Observable.CombineLatest(
+                    ProjectionTypeName.Where(name => !string.IsNullOrEmpty(name)),
+                    Schema.Where(schema => schema != null),
+                    Migration,
+                    ValidateMigration,
+                    (name, schema, migration, validateMigration) => new MigrateProjectionTypeSchemaCommand()
+                    {
+                        Name = name!,
+                        Schema = schema!,
+                        Migration = migration,
+                        Validate = validateMigration
+                    }
+                ),
+                (_, command) => command
+            )
+            .SubscribeAsync(MigrateProjectionTypeAsync, CancellationTokenSource.Token);
     }
 }

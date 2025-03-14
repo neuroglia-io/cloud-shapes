@@ -25,429 +25,436 @@
 <div class="p-3">
 
     <h4 class="mb-4">@(string.IsNullOrEmpty(projectionTypeName) ? "New" : "Migrate") Projection Type @(string.IsNullOrEmpty(projectionTypeName) ? "" : $" - {projectionTypeName}")</h4>
-
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
-            <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-            <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
-        </div>
-        <Collapse @ref="informationCollapsible">
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input name="name" type="text" class="form-control" placeholder="Name" readonly="@isEditing" value="@name" @oninput="e => Store.SetName((string?)e.Value)">
-                </div>
-                <div class="mb-3">
-                    <label for="summary" class="form-label">Summary</label>
-                    <MarkdownInput Value="@summary" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
-                </div>
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <MarkdownInput Value="@description" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
-                </div>
-                <div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <label for="tags" class="form-label">Tags</label>
-                        @if (!isEditing)
-                        {
-                            <button type="button" class="btn btn-sm btn-primary @(showTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
-                        }
+    @if (status == PageStatus.Loading)
+    {
+        <Loader /> 
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleInformationCollapsibleAsync">
+                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                <Icon Name="IconName.InfoCircle" Class="me-2" /><h6 class="mb-0">Information</h6>
+            </div>
+            <Collapse @ref="informationCollapsible">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input name="name" type="text" class="form-control" placeholder="Name" readonly="@isEditing" value="@name" @oninput="e => Store.SetName((string?)e.Value)">
                     </div>
-                    <table class="table">
+                    <div class="mb-3">
+                        <label for="summary" class="form-label">Summary</label>
+                        <MarkdownInput Value="@summary" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeSummary((string?)e.Value)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <MarkdownInput Value="@description" Size="MarkdownInputSize.Small" Readonly="@isEditing" OnInput="e => Store.SetProjectionTypeDescription((string?)e.Value)" />
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label for="tags" class="form-label">Tags</label>
+                            @if (!isEditing)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary @(showTagEditor == false ? "" : "d-none")" @onclick="_ => OnAddTag()"><Icon Name="IconName.Plus" /></button>
+                            }
+                        </div>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th class="fit"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (tags.Count > 0)
+                                {
+                                    foreach (var tag in tags)
+                                    {
+                                        <tr>
+                                            <td>@tag.Key</td>
+                                            <td>@tag.Value</td>
+                                            <td class="text-end fit">
+                                                @if (!isEditing)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                <tr class="@(showTagEditor == true ? "" : "d-none")">
+                                    <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" @bind="tagKey" /></td>
+                                    <td class="p-0"><input type="text" class="form-control" placeholder="Value" @bind="tagValue" /></td>
+                                    @if (!isEditing)
+                                    {
+                                        <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
+                                    }
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </Collapse>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleSchemaCollapsibleAsync">
+                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                <Icon Name="IconName.FileTypeJson" Class="me-2" /><h6 class="mb-0">Schema</h6>
+            </div>
+            <Collapse @ref="schemaCollapsible">
+                <div class="card-body">
+                    <MonacoEditor @ref="schemaInput" Document="originalSchema" OnTextChanged="Store.SetSerializedSchema" />
+                </div>
+            </Collapse>
+        </div>
+
+        @if (isEditing)
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleMigrationCollapsibleAsync">
+                    <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                    <Icon Name="IconName.DatabaseUp" Class="me-2" /><h6 class="mb-0">Migration</h6>
+                </div>
+                <Collapse @ref="migrationCollapsible">
+                    <div class="card-body">
+                        <div class="my-3 d-flex align-items-center justify-content-between gap-3">
+                            <div class="form-floating">
+                                <select id="patch-type" class="form-select" @onchange="e => Store.SetMigrationPatchType((string)e.Value!)">
+                                    <option value="@PatchType.JsonPatch">Json Patch</option>
+                                    <option value="@PatchType.JsonMergePatch">Json Merge Patch</option>
+                                    <option value="@PatchType.JsonStrategicMergePatch">Json Strategic Merge Patch</option>
+                                </select>
+                                <label class="form-label" for="patch-type">Patch Type</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input type="checkbox" id="validate-migration-switch" class="form-check-input" role="switch" value="true" checked="@validateMigration" @onchange="e => Store.SetValidateMigration((bool)e.Value!)">
+                                <label class="form-check-label" for="validate-migration-switch">Validate the projections of the updated type</label>
+                            </div>
+                        </div>
+                        <MonacoEditor OnTextChanged="Store.SetSerializedMigration" />
+                    </div>
+                </Collapse>
+            </div>
+        }
+
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
+                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                <Icon Name="IconName.LightningChargeFill" Class="me-2" /><h6 class="mb-0">Triggers</h6>
+            </div>
+            <Collapse @ref="triggersCollapsible">
+                <div class="card-body">
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
+                            <div class="d-flex justify-content-between align-items-baseline">
+                                <div class="d-flex align-items-baseline w-100">
+                                    <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                                    <Icon Name="IconName.PlusCircle" Class="me-2" />
+                                    <div class="d-flex align-items-baseline justify-content-between w-100">
+                                        <label class="form-label">Create Triggers</label>
+                                        <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Create.Count)</small>
+                                    </div>
+                                </div>
+                                @if (!isEditing) { 
+                                    <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                                }
+                            </div>
+                        </div>
+                        <Collapse @ref="createTriggersCollapsible">
+                            <div class="card-body">
+                                <table class="table table-hover mt-n3">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th class="text-center">Source</th>
+                                            <th class="text-center">Correlation</th>
+                                            <th class="text-end fit"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var trigger in triggers.Create)
+                                        {
+                                            <tr>
+                                                <td><code>@trigger.Event.Type</code></td>
+                                                <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                                <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                                <td class="text-end fit">
+                                                    @if (!isEditing)
+                                                    {
+                                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveCreateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                        </ul>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Collapse>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" @onclick="OnToggleUpdateTriggersCollapsibleAsync">
+                            <div class="d-flex justify-content-between align-items-baseline">
+                                <div class="d-flex align-items-baseline w-100">
+                                    <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                                    <Icon Name="IconName.ArrowClockwise" Class="me-2" />
+                                    <div class="d-flex align-items-baseline justify-content-between w-100">
+                                        <label for="tags" class="form-label">Update Triggers</label>
+                                        <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Update?.Count ?? 0)</small>
+                                    </div>
+                                </div>
+                                @if (!isEditing)
+                                {
+                                    <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                                }
+                            </div>
+                        </div>
+                        <Collapse @ref="updateTriggersCollapsible">
+                            <div class="card-body">
+                                <table class="table table-hover mt-n3">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th class="text-center">Source</th>
+                                            <th class="text-center">Correlation</th>
+                                            <th class="text-center">Strategy</th>
+                                            <th class="text-end fit"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if(triggers.Update != null)
+                                        {
+                                            foreach(var trigger in triggers.Update)
+                                            {
+                                                <tr>
+                                                    <td><code>@trigger.Event.Type</code></td>
+                                                    <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                                    <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                                    <td class="text-center"><span class="border border-primary rounded-pill badge text-primary">@trigger.Strategy</span></td>
+                                                    <td class="text-end fit">
+                                                        @if (!isEditing)
+                                                        {
+                                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveUpdateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                            </ul>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Collapse>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header" role="button" @onclick="OnToggleDeleteTriggersCollapsibleAsync">
+                            <div class="d-flex justify-content-between align-items-baseline">
+                                <div class="d-flex align-items-baseline w-100">
+                                    <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                                    <Icon Name="IconName.XCircle" Class="me-2" />
+                                    <div class="d-flex align-items-baseline justify-content-between w-100">
+                                        <label for="tags" class="form-label">Delete Triggers</label>
+                                        <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Delete?.Count ?? 0)</small>
+                                    </div>
+                                </div>
+                                @if (!isEditing)
+                                {
+                                    <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                                }
+                            </div>
+                        </div>
+                        <Collapse @ref="deleteTriggersCollapsible">
+                            <div class="card-body">
+                                <table class="table table-hover mt-n3">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th class="text-center">Source</th>
+                                            <th class="text-center">Correlation</th>
+                                            <th class="text-end fit"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (triggers.Delete != null)
+                                        {
+                                            foreach (var trigger in triggers.Delete)
+                                            {
+                                                <tr>
+                                                    <td><code>@trigger.Event.Type</code></td>
+                                                    <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                                    <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                                    <td class="text-end fit">
+                                                        @if (!isEditing)
+                                                        {
+                                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveDeleteTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                            </ul>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Collapse>
+                    </div>
+
+                </div>
+            </Collapse>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleRelationshipsCollapsibleAsync">
+                <div class="d-flex align-items-baseline w-100">
+                    <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                    <Icon Name="IconName.Link" Class="me-2" />
+                    <div class="d-flex align-items-baseline justify-content-between w-100">
+                        <h6 class="mb-0">Relationships</h6>
+                        <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(relationships.Count)</small>
+                    </div>
+                </div>
+                @if (!isEditing)
+                {
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddRelationshipAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                }
+            </div>
+            <Collapse @ref="relationshipsCollapsible">
+                <div class="card-body">
+                    <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Value</th>
-                                <th class="fit"></th>
+                                <th>Type</th>
+                                <th class="text-center">Target</th>
+                                <th class="text-center">Key</th>
+                                <th class="text-center">Path</th>
+                                <th class="text-end fit"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if (tags.Count > 0)
+                            @if(relationships.Count > 0)
                             {
-                                foreach (var tag in tags)
+                                foreach(var relationship in relationships)
                                 {
                                     <tr>
-                                        <td>@tag.Key</td>
-                                        <td>@tag.Value</td>
+                                        <td><span class="border border-primary badge text-primary">@relationship.Type</span></td>
+                                        <td class="text-center"><a href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true">@relationship.Target</a></td>
+                                        <td class="text-center"><code>@relationship.Key</code></td>
+                                        <td class="text-center"><code>@relationship.Path</code></td>
                                         <td class="text-end fit">
                                             @if (!isEditing)
                                             {
-                                                <button class="btn btn-sm btn-outline-danger" title="Remove the tag" @onclick="_ => OnRemoveTag(tag.Key)" @onclick:preventDefault @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /></button>
+                                                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveRelationship(relationship)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                </ul>
                                             }
                                         </td>
                                     </tr>
                                 }
                             }
-                            <tr class="@(showTagEditor == true ? "" : "d-none")">
-                                <td class="ps-0 py-0"><input type="text" class="form-control" placeholder="Key" @bind="tagKey" /></td>
-                                <td class="p-0"><input type="text" class="form-control" placeholder="Value" @bind="tagValue" /></td>
-                                @if (!isEditing)
-                                {
-                                    <td class="text-end py-0 fit"><button type="button" class="btn btn-sm btn-primary" @onclick="_ => OnConfirmAddTag()"><Icon Name="IconName.Plus" /></button></td>
-                                }
-                            </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </Collapse>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleSchemaCollapsibleAsync">
-            <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-            <Icon Name="IconName.FileTypeJson" Class="me-2" /><h6 class="mb-0">Schema</h6>
+            </Collapse>
         </div>
-        <Collapse @ref="schemaCollapsible">
-            <div class="card-body">
-                <MonacoEditor @ref="schemaInput" Document="originalSchema" OnTextChanged="Store.SetSerializedSchema" />
-            </div>
-        </Collapse>
-    </div>
 
-    @if (isEditing)
-    {
         <div class="card mb-3">
-            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleMigrationCollapsibleAsync">
-                <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                <Icon Name="IconName.DatabaseUp" Class="me-2" /><h6 class="mb-0">Migration</h6>
-            </div>
-            <Collapse @ref="migrationCollapsible">
-                <div class="card-body">
-                    <div class="my-3 d-flex align-items-center justify-content-between gap-3">
-                        <div class="form-floating">
-                            <select id="patch-type" class="form-select" @onchange="e => Store.SetMigrationPatchType((string)e.Value!)">
-                                <option value="@PatchType.JsonPatch">Json Patch</option>
-                                <option value="@PatchType.JsonMergePatch">Json Merge Patch</option>
-                                <option value="@PatchType.JsonStrategicMergePatch">Json Strategic Merge Patch</option>
-                            </select>
-                            <label class="form-label" for="patch-type">Patch Type</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input type="checkbox" id="validate-migration-switch" class="form-check-input" role="switch" value="true" checked="@validateMigration" @onchange="e => Store.SetValidateMigration((bool)e.Value!)">
-                            <label class="form-check-label" for="validate-migration-switch">Validate the projections of the updated type</label>
-                        </div>
+            <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleIndexesCollapsibleAsync">
+                <div class="d-flex align-items-baseline w-100">
+                    <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                    <Icon Name="IconName.ListOl" Class="me-2" />
+                    <div class="d-flex align-items-baseline justify-content-between w-100">
+                        <h6 class="mb-0">Indexes</h6>
+                        <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(indexes.Count)</small>
                     </div>
-                    <MonacoEditor OnTextChanged="Store.SetSerializedMigration" />
+                </div>
+                @if (!isEditing)
+                {
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddIndexAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
+                }
+            </div>
+            <Collapse @ref="indexesCollapsible">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="text-center">Fields</th>
+                                <th class="text-center">Unique</th>
+                                <th class="text-center">Descending</th>
+                                <th class="text-center">Text</th>
+                                <th class="text-end fit"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (indexes.Count > 0)
+                            {
+                                foreach (var index in indexes)
+                                {
+                                    <tr>
+                                        <td>@index.Name</td>
+                                        <td class="text-center">
+                                            @foreach(var property in index.Properties)
+                                            {
+                                                <div><code>@property</code></div>
+                                            }
+                                        </td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Unique" disabled class="form-check mx-auto" /></td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Descending" disabled class="form-check mx-auto" /></td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Text" disabled class="form-check mx-auto" /></td>
+                                        <td class="text-end fit">
+                                            @if (!isEditing)
+                                            {
+                                                <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveIndex(index)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
+                                                </ul>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </Collapse>
         </div>
+
+        @if (errors.Count > 0)
+        {
+            <div class="alert alert-danger mb-3">
+                <ul>
+                    @foreach (var error in errors)
+                    {
+                        <li>@((MarkupString)error)</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <button class="btn btn-dark w-100" @onclick="Store.Complete"><Icon Name="IconName.X" /> &nbsp; Cancel</button>
+        <button class="btn btn-primary w-100" disabled="@(status != PageStatus.Pending)" @onclick="OnProjectionTypeEditorAsync"><Icon Name="IconName.Floppy" /> &nbsp; @(string.IsNullOrEmpty(projectionTypeName) ? "Create" : "Migrate")</button>
     }
-
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleTriggersCollapsibleAsync">
-            <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-            <Icon Name="IconName.LightningChargeFill" Class="me-2" /><h6 class="mb-0">Triggers</h6>
-        </div>
-        <Collapse @ref="triggersCollapsible">
-            <div class="card-body">
-                <div class="card mb-3">
-                    <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline w-100">
-                                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                                <Icon Name="IconName.PlusCircle" Class="me-2" />
-                                <div class="d-flex align-items-baseline justify-content-between w-100">
-                                    <label class="form-label">Create Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Create.Count)</small>
-                                </div>
-                            </div>
-                            @if (!isEditing) { 
-                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddCreateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-                            }
-                        </div>
-                    </div>
-                    <Collapse @ref="createTriggersCollapsible">
-                        <div class="card-body">
-                            <table class="table table-hover mt-n3">
-                                <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th class="text-center">Source</th>
-                                        <th class="text-center">Correlation</th>
-                                        <th class="text-end fit"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var trigger in triggers.Create)
-                                    {
-                                        <tr>
-                                            <td><code>@trigger.Event.Type</code></td>
-                                            <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
-                                            <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
-                                            <td class="text-end fit">
-                                                @if (!isEditing)
-                                                {
-                                                    <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveCreateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                    </ul>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </Collapse>
-                </div>
-
-                <div class="card mb-3">
-                    <div class="card-header" role="button" @onclick="OnToggleUpdateTriggersCollapsibleAsync">
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline w-100">
-                                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                                <Icon Name="IconName.ArrowClockwise" Class="me-2" />
-                                <div class="d-flex align-items-baseline justify-content-between w-100">
-                                    <label for="tags" class="form-label">Update Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Update?.Count ?? 0)</small>
-                                </div>
-                            </div>
-                            @if (!isEditing)
-                            {
-                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddUpdateTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-                            }
-                        </div>
-                    </div>
-                    <Collapse @ref="updateTriggersCollapsible">
-                        <div class="card-body">
-                            <table class="table table-hover mt-n3">
-                                <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th class="text-center">Source</th>
-                                        <th class="text-center">Correlation</th>
-                                        <th class="text-center">Strategy</th>
-                                        <th class="text-end fit"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if(triggers.Update != null)
-                                    {
-                                        foreach(var trigger in triggers.Update)
-                                        {
-                                            <tr>
-                                                <td><code>@trigger.Event.Type</code></td>
-                                                <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
-                                                <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
-                                                <td class="text-center"><span class="border border-primary rounded-pill badge text-primary">@trigger.Strategy</span></td>
-                                                <td class="text-end fit">
-                                                    @if (!isEditing)
-                                                    {
-                                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                        <ul class="dropdown-menu">
-                                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveUpdateTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                        </ul>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </Collapse>
-                </div>
-
-                <div class="card mb-3">
-                    <div class="card-header" role="button" @onclick="OnToggleDeleteTriggersCollapsibleAsync">
-                        <div class="d-flex justify-content-between align-items-baseline">
-                            <div class="d-flex align-items-baseline w-100">
-                                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                                <Icon Name="IconName.XCircle" Class="me-2" />
-                                <div class="d-flex align-items-baseline justify-content-between w-100">
-                                    <label for="tags" class="form-label">Delete Triggers</label>
-                                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Delete?.Count ?? 0)</small>
-                                </div>
-                            </div>
-                            @if (!isEditing)
-                            {
-                                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddDeleteTriggerAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-                            }
-                        </div>
-                    </div>
-                    <Collapse @ref="deleteTriggersCollapsible">
-                        <div class="card-body">
-                            <table class="table table-hover mt-n3">
-                                <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th class="text-center">Source</th>
-                                        <th class="text-center">Correlation</th>
-                                        <th class="text-end fit"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (triggers.Delete != null)
-                                    {
-                                        foreach (var trigger in triggers.Delete)
-                                        {
-                                            <tr>
-                                                <td><code>@trigger.Event.Type</code></td>
-                                                <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
-                                                <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
-                                                <td class="text-end fit">
-                                                    @if (!isEditing)
-                                                    {
-                                                        <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                                        <ul class="dropdown-menu">
-                                                            <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                            <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveDeleteTrigger(trigger)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                                        </ul>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </Collapse>
-                </div>
-
-            </div>
-        </Collapse>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleRelationshipsCollapsibleAsync">
-            <div class="d-flex align-items-baseline w-100">
-                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                <Icon Name="IconName.Link" Class="me-2" />
-                <div class="d-flex align-items-baseline justify-content-between w-100">
-                    <h6 class="mb-0">Relationships</h6>
-                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(relationships.Count)</small>
-                </div>
-            </div>
-            @if (!isEditing)
-            {
-                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddRelationshipAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-            }
-        </div>
-        <Collapse @ref="relationshipsCollapsible">
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th class="text-center">Target</th>
-                            <th class="text-center">Key</th>
-                            <th class="text-center">Path</th>
-                            <th class="text-end fit"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if(relationships.Count > 0)
-                        {
-                            foreach(var relationship in relationships)
-                            {
-                                <tr>
-                                    <td><span class="border border-primary badge text-primary">@relationship.Type</span></td>
-                                    <td class="text-center"><a href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true">@relationship.Target</a></td>
-                                    <td class="text-center"><code>@relationship.Key</code></td>
-                                    <td class="text-center"><code>@relationship.Path</code></td>
-                                    <td class="text-end fit">
-                                        @if (!isEditing)
-                                        {
-                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                            <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveRelationship(relationship)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                            </ul>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </Collapse>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-baseline" role="button" @onclick="OnToggleIndexesCollapsibleAsync">
-            <div class="d-flex align-items-baseline w-100">
-                <Icon Name="IconName.CaretRight"Color="IconColor.Secondary" Class="caret text-secondary me-2" />
-                <Icon Name="IconName.ListOl" Class="me-2" />
-                <div class="d-flex align-items-baseline justify-content-between w-100">
-                    <h6 class="mb-0">Indexes</h6>
-                    <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(indexes.Count)</small>
-                </div>
-            </div>
-            @if (!isEditing)
-            {
-                <button type="button" class="btn btn-sm btn-primary" @onclick="async _ => await OnAddIndexAsync()" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Plus" /></button>
-            }
-        </div>
-        <Collapse @ref="indexesCollapsible">
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th class="text-center">Fields</th>
-                            <th class="text-center">Unique</th>
-                            <th class="text-center">Descending</th>
-                            <th class="text-center">Text</th>
-                            <th class="text-end fit"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (indexes.Count > 0)
-                        {
-                            foreach (var index in indexes)
-                            {
-                                <tr>
-                                    <td>@index.Name</td>
-                                    <td class="text-center">
-                                        @foreach(var property in index.Properties)
-                                        {
-                                            <div><code>@property</code></div>
-                                        }
-                                    </td>
-                                    <td class="text-center"><input type="checkbox" checked="@index.Unique" disabled class="form-check mx-auto" /></td>
-                                    <td class="text-center"><input type="checkbox" checked="@index.Descending" disabled class="form-check mx-auto" /></td>
-                                    <td class="text-center"><input type="checkbox" checked="@index.Text" disabled class="form-check mx-auto" /></td>
-                                    <td class="text-end fit">
-                                        @if (!isEditing)
-                                        {
-                                            <button class="btn btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="" @onclick:stopPropagation="true"><i class="bi bi-three-dots-vertical"></i></button>
-                                            <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Pencil" /> Edit</a></li>
-                                                <li><a class="dropdown-item text-danger" href="#" @onclick="_ => Store.RemoveIndex(index)" @onclick:preventDefault="true" @onclick:stopPropagation="true"><Icon Name="IconName.Trash" /> Remove</a></li>
-                                            </ul>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </Collapse>
-    </div>
-
-    @if (errors.Count > 0)
-    {
-        <div class="alert alert-danger mb-3">
-            <ul>
-                @foreach (var error in errors)
-                {
-                    <li>@((MarkupString)error)</li>
-                }
-            </ul>
-        </div>
-    }
-
-    <button class="btn btn-primary w-100" @onclick="OnProjectionTypeEditorAsync"><Icon Name="IconName.Floppy" /> &nbsp; @(string.IsNullOrEmpty(projectionTypeName) ? "Create" : "Migrate")</button>
-
 </div>
 
 <Modal @ref="modal" Size="ModalSize.Large" IsVerticallyCentered="true" />
 <ConfirmDialog @ref="dialog" />
+
 
 @code{
     Collapse? informationCollapsible;
@@ -462,6 +469,7 @@
     Collapse? indexesCollapsible;
     Modal? modal;
     ConfirmDialog? dialog;
+    string status = PageStatus.Pending;
     string? projectionTypeName;
     string? name;
     string? summary;
@@ -513,12 +521,32 @@
         Store.Relationships.Subscribe(value => OnStateChanged(_ => relationships = value), CancellationTokenSource.Token);
         Store.Tags.Subscribe(value => OnStateChanged(_ => tags = value), CancellationTokenSource.Token);
         Store.Errors.Subscribe(value => OnStateChanged(_ => errors = value), CancellationTokenSource.Token);
-        Store.Sent.Subscribe(_ =>
+        Store.Status.Subscribe(value =>
         {
-            if (string.IsNullOrEmpty(ProjectionTypeName))
+            if (value == PageStatus.Completed)
             {
                 Navigation.NavigateTo("/types", false);
             }
+            OnStateChanged(_ => status = value);
+        }, CancellationTokenSource.Token);
+        Observable.CombineLatest(
+            Store.MigrationOutcome.Where(outcome => !string.IsNullOrWhiteSpace(outcome)),
+            Store.MigrationWarnings,
+            Store.MigrationValidationErrors,
+            Store.ProcessedProjections,
+            (outcome, warnings, errors, processedProjections) => new { Outcome = outcome!, Warnings = warnings, Errors = errors, ProcessedProjections = processedProjections }
+        ).SubscribeAsync(async payload => {
+            if (modal == null) return;
+            var parameters = new Dictionary<string, object>();
+            parameters[nameof(MigrationResultModal.Outcome)] = payload.Outcome;
+            parameters[nameof(MigrationResultModal.Warnings)] = payload.Warnings;
+            parameters[nameof(MigrationResultModal.Errors)] = payload.Errors;
+            parameters[nameof(MigrationResultModal.ProcessedProjections)] = payload.ProcessedProjections;
+            parameters[nameof(MigrationResultModal.OnAcknowledged)] = EventCallback.Factory.Create(this, _ =>
+            {
+                Store.Complete();
+            });
+            await modal.ShowAsync<MigrationResultModal>("Migration Results", null, parameters);
         }, CancellationTokenSource.Token);
     }
 
