@@ -421,27 +421,70 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// </summary>
     /// <param name="request">The <see cref="SidebarDataProviderRequest"/> to handle</param>
     /// <returns>A new <see cref="SidebarDataProviderResult"/></returns>
-    public Task<SidebarDataProviderResult> ProvideSidebarDataAsync(SidebarDataProviderRequest request)
+    public Task<Sidebar2DataProviderResult> ProvideSidebarDataAsync(Sidebar2DataProviderRequest request)
     {
         var navItems = new List<NavItem>()
         {
             new()
             {
+                Id = "new-type",
                 Href = $"/types/new",
                 IconName = IconName.PlusSquare,
                 Text = "New...",
                 Class = "border-bottom border-secondary-subtle"
             }
         };
-        navItems.AddRange(Get().ProjectionTypes.Select(t =>
+        navItems.AddRange(Get().ProjectionTypes.SelectMany(t =>
         {
             var plural = pluralize.Pluralize(t.Name);
-            return new NavItem()
-            {
-                Href = $"/projections/{plural.ToCamelCase()}",
-                IconName = IconName.Cast,
-                Text = $"{plural} ({t.Metadata.ProjectionCount})"
-            };
+            return new List<NavItem>([
+                new NavItem()
+                {
+                    Id = $"{plural}-menu",
+                    IconName = IconName.Cast,
+                    Text = $"{plural} ({t.Metadata.ProjectionCount})"
+                },
+                new NavItem()
+                {
+                    Id = $"{plural}-list",
+                    ParentId = $"{plural}-menu",
+                    Href = $"/projections/{plural.ToCamelCase()}",
+                    IconName = IconName.List,
+                    Text = $"List ({t.Metadata.ProjectionCount})"
+                },
+                new NavItem()
+                {
+                    Id = $"{plural}-list",
+                    ParentId = $"{plural}-menu",
+                    Href = $"/types/information/{t.Name}",
+                    IconName = IconName.InfoCircle,
+                    Text = $"Information"
+                },
+                new NavItem()
+                {
+                    Id = $"{plural}-list",
+                    ParentId = $"{plural}-menu",
+                    Href = $"/types/triggers/{t.Name}",
+                    IconName = IconName.LightningChargeFill,
+                    Text = $"Triggers"
+                },
+                new NavItem()
+                {
+                    Id = $"{plural}-list",
+                    ParentId = $"{plural}-menu",
+                    Href = $"/types/relationships/{t.Name}",
+                    IconName = IconName.Link,
+                    Text = $"Relationships"
+                },
+                new NavItem()
+                {
+                    Id = $"{plural}-list",
+                    ParentId = $"{plural}-menu",
+                    Href = $"/types/indexes/{t.Name}",
+                    IconName = IconName.ListOl,
+                    Text = $"Indexes"
+                },
+            ]);
         }));
         return Task.FromResult(request.ApplyTo(navItems));
     }

@@ -1,0 +1,36 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Components
+
+@if (!string.IsNullOrWhiteSpace(Key))
+{
+    @if (string.IsNullOrWhiteSpace(Value))
+    {
+        <span class="badge rounded-pill text-bg-primary">@Key</span>
+    }
+    else
+    {
+        <div class="btn-group" role="group" aria-label="tag">
+            <span class="btn pe-none badge text-bg-primary btn-sm px-2 py-1">@Key</span>
+            <span class="btn pe-none badge text-bg-secondary btn-sm px-2 py-1">@Value</span>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public string Key { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+}

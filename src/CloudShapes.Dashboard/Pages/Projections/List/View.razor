@@ -22,7 +22,7 @@
 @inject IPluralize Pluralize
 @inject NavigationManager Navigation
 
-<PageTitle>Cloud Shapes - @(string.IsNullOrWhiteSpace(ProjectionTypeName) ? "Projections" : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(ProjectionTypeName))</PageTitle>
+<ApplicationTitle>@(string.IsNullOrWhiteSpace(ProjectionTypeName) ? "Projections" : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(ProjectionTypeName))</ApplicationTitle>
 
 @if (loading)
 {
@@ -39,7 +39,7 @@ else
     else
     {
         <div class="d-flex flex-grow">
-            <Sidebar @ref="sidebar" Class="d-flex d-flex flex-column" Href="/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+            <Sidebar2 @ref="sidebar" Class="d-flex d-flex flex-column" Href="/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
             <div class="w-100 p-3 d-flex flex-column">
                 <div class="projection-info pb-3">
                     <div class="d-flex justify-content-between">
@@ -55,6 +55,16 @@ else
                     @if (!string.IsNullOrEmpty(projectionType.Summary)) 
                     {
                         <Markdown>@projectionType.Summary</Markdown>
+                    }
+
+                    @if (projectionType.Tags?.Count > 0)
+                    {
+                        <div class="d-flex d-flex gap-2 flex-wrap">
+                            @foreach (var tag in projectionType.Tags)
+                            {
+                                <Tag Key="@tag.Key" Value="@tag.Value" />
+                            }
+                        </div>
                     }
                 </div>
                 <div class="d-flex align-baseline">
@@ -139,7 +149,7 @@ else
 </Modal>
 
 @code {
-    Sidebar? sidebar;
+    Sidebar2? sidebar;
     Collapse? descriptionCollapse;
     Modal? descriptionModal;
     Offcanvas? offcanvas;

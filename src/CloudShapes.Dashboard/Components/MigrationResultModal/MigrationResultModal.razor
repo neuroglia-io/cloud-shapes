@@ -15,7 +15,10 @@
 *@
 @namespace CloudShapes.Dashboard.Components
 
-<p class="lead">@ProcessedProjections Projection@(ProcessedProjections == 1 ? "" : "s") Processed</p>
+<Callout>
+    <strong>@ProcessedProjections</strong> Projection@(ProcessedProjections == 1 ? "" : "s") Processed.
+</Callout>
+
 @if (Warnings.Count > 0)
 {
     <Callout Color="CalloutColor.Warning" Heading="WARNINGS">

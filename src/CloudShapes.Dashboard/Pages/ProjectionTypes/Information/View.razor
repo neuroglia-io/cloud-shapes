@@ -1,0 +1,110 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Information
+@page "/types/information/{projectionTypeName}"
+@using CloudShapes.Integration.Commands.ProjectionTypes
+@inherits StatefulComponent<ProjectionTypeInformationStore, ProjectionTypeInformationState>
+@inject NavigationManager Navigation
+
+<ApplicationTitle>@name Information</ApplicationTitle>
+
+<div class="p-
+
+    <h4 class="mb-4">
+        <Icon Name="IconName.InfoCircle" Class="me-2" />
+        @name Information
+    </h4>
+    @if (status == PageStatus.Loading)
+    {
+        <Loader /> 
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-xl-6">
+                        <div class="mb-3">
+                            <h5>Name</h5>
+                            @name
+                        </div>
+                        <div class="mb-3">
+                            <h5>Summary</h5>
+                            <Markdown>@summary</Markdown>
+                        </div>
+                        <div class="mb-3">
+                            <h5>Description</h5>
+                            <Markdown>@description</Markdown>
+                        </div>
+                        <div class="mb-3">
+                            <h5>Tags</h5>
+                            @if (tags.Count > 0)
+                            {
+                                <div class="d-flex d-flex gap-2 flex-wrap">
+                                @foreach (var tag in tags)
+                                {
+                                    <Tag Key="@tag.Key" Value="@tag.Value" />
+                                }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-xl-6">
+                        <h5>Schema</h5>
+                        <MonacoEditor @ref="schemaInput" Document="schema" IsReadOnly="true" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
+@code{
+    MonacoEditor? schemaInput;
+    string status = PageStatus.Pending;
+    string? projectionTypeName;
+    string? name;
+    string? summary;
+    string? description;
+    JsonSchema? schema;
+    EquatableDictionary<string, string> tags { get; set; } = [];
+
+    [Parameter] public string? ProjectionTypeName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.ProjectionType.Subscribe(value => OnStateChanged(_ => {
+            name = value.Name;
+            summary = value.Summary;
+            description = value.Description;
+            schema = value.Schema;
+            tags = new(value.Tags ?? []);
+        }), CancellationTokenSource.Token);
+        Store.Status.Subscribe(value =>OnStateChanged(_ => status = value), CancellationTokenSource.Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionTypeName != ProjectionTypeName)
+        {
+            Store.SetProjectionTypeName(ProjectionTypeName);
+        }
+        base.OnParametersSet();
+    }
+
+}
