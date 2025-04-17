@@ -32,7 +32,7 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="Neuroglia.Mediation" Version="4.20.1" />
+    <PackageReference Include="Neuroglia.Mediation" Version="4.21.0" />
   </ItemGroup>
 
   <ItemGroup>

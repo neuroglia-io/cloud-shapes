@@ -34,7 +34,7 @@ else
         <ProjectionsNav Refresh="Store.Refresh" OnLoadingChange="Store.SetLoading" OnProjectionTypesChange="Store.SettProjectionTypes" />
         @if (projectionType == null)
         {
-            <p class="text-muted text-center my-auto">
+            <p class="text-muted w-100 text-center my-auto">
                 No projection types are currently defined. <a class="fw-bold" role="button" @onclick="OnProjectionTypeEditor" @onclick:preventDefault="true" @onclick:stopPropagation="true">Click here</a> to create one.
             </p>
         }
