@@ -1,0 +1,219 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Triggers
+@page "/types/triggers/{projectionTypeName}"
+@using CloudShapes.Integration.Commands.ProjectionTypes
+@inherits StatefulComponent<ProjectionTypeTriggersStore, ProjectionTypeTriggersState>
+@inject NavigationManager Navigation
+
+<ApplicationTitle>@name Triggers</ApplicationTitle>
+
+<div class="d-flex flex-grow">
+    <ProjectionsNav />
+    <div class="w-100 p-3 d-flex flex-column">
+        <h4 class="mb-3">
+            <Icon Name="IconName.LightningChargeFill" Class="me-2" />
+            @name Triggers
+        </h4>
+        @if (status == PageStatus.Loading)
+        {
+            <Loader />
+        }
+        else
+        {
+            <div class="card mb-3">
+                <div class="card-header" role="button" @onclick="OnToggleCreateTriggersCollapsibleAsync">
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <div class="d-flex align-items-baseline w-100">
+                            <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                            <Icon Name="IconName.PlusCircle" Class="me-2" />
+                            <div class="d-flex align-items-baseline justify-content-between w-100">
+                                <label class="form-label">Create Triggers</label>
+                                <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Create.Count)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <Collapse @ref="createTriggersCollapsible">
+                    <div class="card-body">
+                        <table class="table table-hover mt-n3">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th class="text-center">Source</th>
+                                    <th class="text-center">Correlation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trigger in triggers.Create)
+                                {
+                                    <tr>
+                                        <td><code>@trigger.Event.Type</code></td>
+                                        <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                        <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </Collapse>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header" role="button" @onclick="OnToggleUpdateTriggersCollapsibleAsync">
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <div class="d-flex align-items-baseline w-100">
+                            <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                            <Icon Name="IconName.ArrowClockwise" Class="me-2" />
+                            <div class="d-flex align-items-baseline justify-content-between w-100">
+                                <label for="tags" class="form-label">Update Triggers</label>
+                                <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Update?.Count ?? 0)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <Collapse @ref="updateTriggersCollapsible">
+                    <div class="card-body">
+                        <table class="table table-hover mt-n3">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th class="text-center">Source</th>
+                                    <th class="text-center">Correlation</th>
+                                    <th class="text-center">Strategy</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (triggers.Update != null)
+                                {
+                                    foreach (var trigger in triggers.Update)
+                                    {
+                                        <tr>
+                                            <td><code>@trigger.Event.Type</code></td>
+                                            <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                            <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                            <td class="text-center"><span class="border border-primary rounded-pill badge text-primary">@trigger.Strategy</span></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </Collapse>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header" role="button" @onclick="OnToggleDeleteTriggersCollapsibleAsync">
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <div class="d-flex align-items-baseline w-100">
+                            <Icon Name="IconName.CaretRight" Color="IconColor.Secondary" Class="caret text-secondary me-2" />
+                            <Icon Name="IconName.XCircle" Class="me-2" />
+                            <div class="d-flex align-items-baseline justify-content-between w-100">
+                                <label for="tags" class="form-label">Delete Triggers</label>
+                                <small class="border border-secondary rounded-pill badge text-secondary me-3">Count: @(triggers.Delete?.Count ?? 0)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <Collapse @ref="deleteTriggersCollapsible">
+                    <div class="card-body">
+                        <table class="table table-hover mt-n3">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th class="text-center">Source</th>
+                                    <th class="text-center">Correlation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (triggers.Delete != null)
+                                {
+                                    foreach (var trigger in triggers.Delete)
+                                    {
+                                        <tr>
+                                            <td><code>@trigger.Event.Type</code></td>
+                                            <td class="text-center">@((MarkupString)(string.IsNullOrWhiteSpace(trigger.Event.Source) ? "-" : $"<code>{trigger.Event.Source}</code>"))</td>
+                                            <td class="text-center"><code>@(trigger.Event.Correlation.Attribute ?? trigger.Event.Correlation.Expression)</code></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </Collapse>
+            </div>
+
+        }
+
+    </div>
+</div>
+
+@code{
+    Collapse? createTriggersCollapsible;
+    Collapse? updateTriggersCollapsible;
+    Collapse? deleteTriggersCollapsible;
+    string status = PageStatus.Pending;
+    string? projectionTypeName;
+    string? name;
+    ProjectionTriggerCollection triggers = new();
+
+    [Parameter] public string? ProjectionTypeName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.ProjectionType.SubscribeAsync(async value => {
+            OnStateChanged(_ =>
+            {
+                name = value.Name;
+                triggers = value.Triggers;
+            });
+            if (createTriggersCollapsible != null) await createTriggersCollapsible.ShowAsync();
+            if (updateTriggersCollapsible != null) await updateTriggersCollapsible.ShowAsync();
+            if (deleteTriggersCollapsible != null) await deleteTriggersCollapsible.ShowAsync();
+        }, CancellationTokenSource.Token);
+        Store.Status.Subscribe(value =>OnStateChanged(_ => status = value), CancellationTokenSource.Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionTypeName != ProjectionTypeName && !string.IsNullOrWhiteSpace(ProjectionTypeName))
+        {
+            Store.SetProjectionTypeName(ProjectionTypeName);
+        }
+        base.OnParametersSet();
+    }
+
+    async Task OnToggleCreateTriggersCollapsibleAsync()
+    {
+        if (createTriggersCollapsible == null) return;
+        await createTriggersCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleUpdateTriggersCollapsibleAsync()
+    {
+        if (updateTriggersCollapsible == null) return;
+        await updateTriggersCollapsible.ToggleAsync();
+    }
+
+    async Task OnToggleDeleteTriggersCollapsibleAsync()
+    {
+        if (deleteTriggersCollapsible == null) return;
+        await deleteTriggersCollapsible.ToggleAsync();
+    }
+
+
+}

@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Information;
+namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Triggers;
 
 /// <summary>
-/// Represents the state of the information projection type view
+/// Represents the state of the Triggers projection type view
 /// </summary>
-public record ProjectionTypeInformationState
+public record ProjectionTypeTriggersState
 {
 
     /// <summary>
@@ -33,15 +33,5 @@ public record ProjectionTypeInformationState
     /// Gets/sets the <see cref="ProjectionType"/> before editing, if any
     /// </summary>
     public ProjectionType? ProjectionType { get; set; } = null!;
-
-    /// <summary>
-    /// Gets/sets the schema that defines, documents and validates the state of projections of this type
-    /// </summary>
-    public JsonSchema? Schema { get; set; } = null;
-
-    /// <summary>
-    /// Gets/sets the schema that defines, documents and validates the state of projections of this type
-    /// </summary>
-    public string? SerializedSchema { get; set; } = null;
 
 }

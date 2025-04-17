@@ -26,7 +26,11 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
 
 
     bool _disposed;
-    readonly BehaviorSubject<System.Reactive.Unit> _refresh = new(System.Reactive.Unit.Default);
+
+    /// <summary>
+    /// A <see cref="BehaviorSubject{T}"/> used to trigger a refresh of the projections list
+    /// </summary>
+    public readonly BehaviorSubject<System.Reactive.Unit> Refresh = new(System.Reactive.Unit.Default);
 
     /// <summary>
     /// The reference to the component used to virtualize the list of projections
@@ -300,16 +304,13 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
             Filters = new(filters)
         });
     }
-    #endregion
 
-    #region Actions
     /// <summary>
-    /// Lists available <see cref="ProjectionType"/>s
+    /// Sets the <see cref="ProjectionListState.ProjectionTypes"/>
     /// </summary>
-    /// <returns>A new awaitable <see cref="Task"/></returns>
-    public async Task ListProjectionTypesAsync()
+    /// <param name="projectionTypes"></param>
+    public void SettProjectionTypes(EquatableList<ProjectionType> projectionTypes)
     {
-        var projectionTypes = (await cloudShapesApi.ProjectionTypes.ListAsync(cancellationToken: CancellationTokenSource.Token)).Items.OrderBy(p => p.Name).ToList();
         Reduce(state => state with
         {
             ProjectionTypes = new(projectionTypes)
@@ -317,7 +318,9 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         if (projectionTypes == null || projectionTypes.Count < 1) return;
         SetProjectionType();
     }
+    #endregion
 
+    #region Actions
     /// <summary>
     /// Lists projections of the specified type
     /// </summary>
@@ -352,7 +355,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         {
             throw; //todo: show error to end user instead
         }
-        _refresh.OnNext(System.Reactive.Unit.Default);
+        Refresh.OnNext(System.Reactive.Unit.Default);
     }
 
     /// <summary>
@@ -409,7 +412,8 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         var projectionTypeName = Get().ProjectionTypeName;
         if (!string.IsNullOrWhiteSpace(projectionTypeName) && pluralize.IsPlural(projectionTypeName)) projectionTypeName = pluralize.Singularize(projectionTypeName);
         if (!string.IsNullOrWhiteSpace(projectionTypeName) && Get().ProjectionType?.Name == projectionTypeName) return;
-        var projectionType = string.IsNullOrWhiteSpace(projectionTypeName) ? projectionTypes.First() : projectionTypes.FirstOrDefault(t => t.Name.Equals(projectionTypeName, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(projectionTypeName)) return;
+        var projectionType = projectionTypes.First(t => t.Name.Equals(projectionTypeName, StringComparison.OrdinalIgnoreCase));
         Reduce(state => state with
         {
             ProjectionType = projectionType
@@ -507,10 +511,16 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         await base.InitializeAsync();
         await cloudEventHub.StartAsync().ConfigureAwait(false);
         CloudEvents = cloudEventHub.Stream();
-        CloudEvents.Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type)).SubscribeAsync(async _ => await ListProjectionTypesAsync(), CancellationTokenSource.Token);
-        CloudEvents.Where(e => CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name).SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
+        CloudEvents
+            .Where(e => CloudShapes.CloudEvents.ProjectionTypes.GetTypes().Contains(e.Type))
+            .Subscribe(_ => Refresh.OnNext(System.Reactive.Unit.Default), CancellationTokenSource.Token);
+        CloudEvents
+            .Where(e => 
+                CloudShapes.CloudEvents.Projections.GetTypes().Contains(e.Type) && 
+                (string)((IDictionary<string, object>)e.Data!)["type"] == Get().ProjectionType?.Name)
+            .SubscribeAsync(OnCloudEventAsync, CancellationTokenSource.Token);
         Observable.CombineLatest(
-            _refresh,
+            Refresh,
             ProjectionTypeName,
             QueryOptions,
             (_, typeName, queryOptions) => (typeName, queryOptions)
@@ -528,7 +538,6 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
             if (Get().ProjectionTypes.Count < 1 || Get().ProjectionType?.Name == typeName) return;
             SetProjectionType();
         }, CancellationTokenSource.Token);
-        await ListProjectionTypesAsync();
         SetLoading(false);
     }
 
@@ -539,8 +548,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
     /// <returns>A new awaitable <see cref="Task"/></returns>
     protected async Task OnCloudEventAsync(CloudEvent e)
     {
-        await ListProjectionTypesAsync();
-        _refresh.OnNext(System.Reactive.Unit.Default);
+        Refresh.OnNext(System.Reactive.Unit.Default);
     }
 
     /// <summary>
@@ -553,7 +561,7 @@ public class ProjectionListStore(ICloudShapesApiClient cloudShapesApi, CloudEven
         {
             if (disposing)
             {
-                this._refresh.OnCompleted();
+                this.Refresh.OnCompleted();
             }
             this._disposed = true;
         }

@@ -23,7 +23,7 @@ public record ProjectionListState
     /// <summary>
     /// Gets/sets a boolean value that indicates whether data is currently being gathered
     /// </summary>
-    public bool Loading { get; set; } = true;
+    public bool Loading { get; set; } = false;
 
     /// <summary>
     /// Gets/sets a list of all available <see cref="Data.Models.ProjectionType"/>s

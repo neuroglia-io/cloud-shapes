@@ -11,34 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Commands.ProjectionTypes;
-
-namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Information;
+namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Schema;
 
 /// <summary>
 /// Represents the store the the create projection type view
 /// </summary>
 /// <param name="logger">The service used to perform logging</param>
 /// <param name="cloudShapesApi">The service used to interact with the Cloud Shapes API</param>
-/// <param name="monacoEditorHelper">The service used to to facilitate the Monaco Information configuration</param>
+/// <param name="monacoEditorHelper">The service used to to facilitate the Monaco Schema configuration</param>
 /// <param name="jsonSerializer">The service used to serialize/deserialize data to/from JSON</param>
 /// <param name="yamlSerializer">The service used to serialize/deserialize data to/from YAML</param>
-public class ProjectionTypeInformationStore(ILogger<ProjectionTypeInformationStore> logger, ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
-    : ComponentStore<ProjectionTypeInformationState>(new())
+public class ProjectionTypeSchemaStore(ILogger<ProjectionTypeSchemaStore> logger, ICloudShapesApiClient cloudShapesApi, IMonacoEditorHelper monacoEditorHelper, IJsonSerializer jsonSerializer, IYamlSerializer yamlSerializer)
+    : ComponentStore<ProjectionTypeSchemaState>(new())
 {
     #region Selectors
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeInformationState.Status"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeSchemaState.Status"/> changes
     /// </summary>
     public IObservable<string> Status => this.Select(state => state.Status).DistinctUntilChanged();
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeInformationState.ProjectionTypeName"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeSchemaState.ProjectionTypeName"/> changes
     /// </summary>
     public IObservable<string?> ProjectionTypeName => this.Select(state => state.ProjectionTypeName).DistinctUntilChanged();
 
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeInformationState.ProjectionType"/> changes
+    /// Gets an <see cref="IObservable{T}"/> used to observe <see cref="ProjectionTypeSchemaState.ProjectionType"/> changes
     /// </summary>
     public IObservable<ProjectionType> ProjectionType => this.Select(state => state.ProjectionType)
         .Where(projectionType => projectionType != null)
@@ -47,7 +45,7 @@ public class ProjectionTypeInformationStore(ILogger<ProjectionTypeInformationSto
 
     #region Setters
     /// <summary>
-    /// Sets the state's <see cref="ProjectionTypeInformationState.ProjectionType"/>
+    /// Sets the state's <see cref="ProjectionTypeSchemaState.ProjectionType"/>
     /// </summary>
     /// <param name="projectionType">The new value</param>
     protected void SetProjectionType(ProjectionType projectionType)
@@ -59,7 +57,7 @@ public class ProjectionTypeInformationStore(ILogger<ProjectionTypeInformationSto
     }
 
     /// <summary>
-    /// Sets the state's <see cref="ProjectionTypeInformationState.ProjectionTypeName"/>
+    /// Sets the state's <see cref="ProjectionTypeSchemaState.ProjectionTypeName"/>
     /// </summary>
     /// <param name="projectionTypeName">The <see cref="ProjectionType"/>'s name</param>
     public void SetProjectionTypeName(string projectionTypeName)
@@ -69,18 +67,6 @@ public class ProjectionTypeInformationStore(ILogger<ProjectionTypeInformationSto
             ProjectionTypeName = projectionTypeName,
         });
     }
-
-    /// <summary>
-    /// Sets the <see cref="ProjectionType"/>'s serialized schema
-    /// </summary>
-    /// <param name="serializedSchema">The serialized schema</param>
-    public void SetSerializedSchema(string? serializedSchema)
-    {
-        Reduce(state => state with
-        {
-            SerializedSchema = serializedSchema
-        });
-    }
     #endregion
 
     #region Actions
@@ -88,7 +74,7 @@ public class ProjectionTypeInformationStore(ILogger<ProjectionTypeInformationSto
 
     /// <inheritdoc/>
     public override async Task InitializeAsync()
-    { 
+    {
         await base.InitializeAsync();
         ProjectionTypeName
             .Where(name => !string.IsNullOrEmpty(name))

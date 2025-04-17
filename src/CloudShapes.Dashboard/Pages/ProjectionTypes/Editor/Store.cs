@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Dashboard.Components.ProjectionDetailsStateManagement;
-using CloudShapes.Data.Models;
 using CloudShapes.Integration.Commands.ProjectionTypes;
 
 namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Editor;
