@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Serializers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,4 +89,3 @@ app.MapHub<CloudEventHub>("api/ws/events");
 app.MapFallbackToFile("index.html");
 
 await app.RunAsync();
-

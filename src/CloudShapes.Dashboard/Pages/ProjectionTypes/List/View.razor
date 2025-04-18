@@ -76,7 +76,7 @@ else
                 <tbody>
                     <Virtualize @ref="Store.Virtualize" Context="projectionType" ItemsProvider="@Store.ProvideProjectionTypesAsync" ItemSize="61">
                         <ItemContent>
-                            <tr class="cursor-pointer">
+                            <tr class="cursor-pointer" @onclick='(_) => Navigation.NavigateTo($"/types/edit/{projectionType.Name}")'>
                                 <td>@projectionType.Name</td>
                                 <td><small><Markdown>@projectionType.Summary</Markdown></small></td>
                                 <td class="text-center">@projectionType.Metadata.CreatedAt.AsMoment()</td>

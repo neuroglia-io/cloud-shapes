@@ -1,0 +1,72 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@using CloudShapes.Dashboard.Components.ProjectionsNavStateManagement
+@namespace CloudShapes.Dashboard.Components
+@inherits StatefulComponent<ProjectionsNav, ProjectionsNavStore, ProjectionsNavState>
+
+<Sidebar2 @ref="Store.Sidebar" Class="d-flex d-flex flex-column" Href="/types" IconName="IconName.Layers" Title="Types" DataProvider="Store.ProvideSidebarDataAsync" />
+
+@code {
+    private CancellationTokenSource? refreshCancellationTokenSource;
+    private IObservable<System.Reactive.Unit>? refresh;
+
+    /// <summary>
+    /// An <see cref="IObservable{T}"/> that emits when the component should refresh its data.
+    /// </summary>
+    [Parameter] public IObservable<System.Reactive.Unit>? Refresh { get; set; }
+
+    /// <summary>
+    /// An <see cref="EventCallback{TValue}"/> that is invoked when the loading state changes.
+    /// </summary>
+    [Parameter] public EventCallback<bool> OnLoadingChange { get; set; } = default!;
+
+    /// <summary>
+    /// An <see cref="EventCallback{TValue}"/> that is invoked when the projection types change.
+    /// </summary>
+    [Parameter] public EventCallback<EquatableList<ProjectionType>> OnProjectionTypesChange { get; set; } = default!;
+
+    /// <inheritdoc/>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.Loading.SubscribeAsync(async value =>
+        {
+            if (OnLoadingChange.HasDelegate) await OnLoadingChange.InvokeAsync(value);
+        }, CancellationTokenSource.Token);
+        Store.ProjectionTypes.SubscribeAsync(async value =>
+        { 
+            if (OnProjectionTypesChange.HasDelegate) await OnProjectionTypesChange.InvokeAsync(value);
+        }, CancellationTokenSource.Token);
+    }
+
+    /// <inheritdoc/>
+    protected override void OnParametersSet()
+    {
+        if (Refresh != refresh) 
+        {
+            if (refreshCancellationTokenSource != null)
+            {
+                refreshCancellationTokenSource.Cancel();
+                refreshCancellationTokenSource.Dispose();
+                refreshCancellationTokenSource = null;
+            }
+            refresh = Refresh;
+            if (refresh == null) return;
+            refreshCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token);
+            refresh.Skip(1).SubscribeAsync(async _ => await Store.ListProjectionTypesAsync(), refreshCancellationTokenSource.Token);
+        }
+    }
+}

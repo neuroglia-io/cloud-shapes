@@ -7,6 +7,7 @@ $enable-negative-margins: true;
 @import "./table.scss";
 @import "./timeline.scss";
 @import "./text-editor.scss";
+@import "./sidebar.scss";
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -119,17 +120,6 @@ h1:focus {
     .modal-footer {
         border-top: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color) !important;
     }
-}
-
-.bb-sidebar {
-    --bb-sidebar-background-color: var(--bs-dark-bg-subtle);
-    --bb-sidebar-nav-item-background-hover-color: rgba(var(--bs-primary-rgb), 0.8);
-    --bb-sidebar-top-row-background-color: var(--bs-dark-bg-subtle);
-}
-
-.bb-sidebar-content {
-    height: unset !important;
-    flex-grow: 1;
 }
 
 .monaco-editor-container-large {

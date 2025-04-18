@@ -1,0 +1,102 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Relationships
+@page "/types/relationships/{projectionTypeName}"
+@using CloudShapes.Integration.Commands.ProjectionTypes
+@inherits StatefulComponent<ProjectionTypeRelationshipsStore, ProjectionTypeRelationshipsState>
+@inject NavigationManager Navigation
+
+<ApplicationTitle>@name Relationships</ApplicationTitle>
+
+<div class="d-flex flex-grow">
+    <ProjectionsNav />
+    <div class="w-100 p-3 d-flex flex-column">
+        <h4 class="mb-3">
+            <Icon Name="IconName.Link" Class="me-2" />
+            @name Relationships
+        </h4>
+        @if (status == PageStatus.Loading)
+        {
+            <Loader />
+        }
+        else
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th class="text-center">Target</th>
+                                <th class="text-center">Key</th>
+                                <th class="text-center">Path</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (relationships.Count > 0)
+                            {
+                                foreach (var relationship in relationships)
+                                {
+                                    <tr>
+                                        <td><span class="border border-primary badge text-primary">@relationship.Type</span></td>
+                                        <td class="text-center"><a href="#" @onclick:preventDefault="true" @onclick:stopPropagation="true">@relationship.Target</a></td>
+                                        <td class="text-center"><code>@relationship.Key</code></td>
+                                        <td class="text-center"><code>@relationship.Path</code></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+<div class="p-3"></div>
+
+
+@code {
+    MonacoEditor? schemaInput;
+    string status = PageStatus.Pending;
+    string? projectionTypeName;
+    string? name;
+    EquatableList<ProjectionRelationshipDefinition> relationships { get; set; } = [];
+
+    [Parameter] public string? ProjectionTypeName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.ProjectionType.Subscribe(value => OnStateChanged(_ =>
+        {
+            name = value.Name;
+            relationships = value.Relationships ?? [];
+        }), CancellationTokenSource.Token);
+        Store.Status.Subscribe(value => OnStateChanged(_ => status = value), CancellationTokenSource.Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionTypeName != ProjectionTypeName && !string.IsNullOrWhiteSpace(ProjectionTypeName))
+        {
+            Store.SetProjectionTypeName(ProjectionTypeName);
+        }
+        base.OnParametersSet();
+    }
+
+}

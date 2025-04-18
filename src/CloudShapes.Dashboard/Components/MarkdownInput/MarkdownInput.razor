@@ -17,12 +17,14 @@
 
 <div class="w-100 mt-n4">
     <Tabs NavStyle="NavStyle.Underline" Class="markdown-input">
-        <Tab Title="Edit" Active="true">
+        <Tab Title="Edit" Active="!readOnly">
             <Content>
-                <textarea class="w-100 @heightClass overflow-scroll p-3 bg-dark-subtle border-0 resize-none" @oninput="e => OnInputAsync((string?)e.Value)"></textarea>
+                <textarea readonly="@readOnly" class="w-100 @heightClass overflow-scroll p-3 bg-dark-subtle border-0 resize-none" @oninput="e => OnInputAsync((string?)e.Value)">
+                    @value
+                </textarea>
             </Content>
         </Tab>
-        <Tab Title="Preview">
+        <Tab Title="Preview" Active="readOnly">
             <Content>
                 <Markdown Class="@markdownClass">@value</Markdown>
             </Content>
@@ -35,10 +37,13 @@
     string heightClass = "h-200-px";
     string markdownClass = $"w-100 h-200-px overflow-scroll p-3 bg-dark-subtle border-0";
     string? value;
+    bool readOnly = false;
 
     [Parameter] public MarkdownInputSize Size { get; set; } = MarkdownInputSize.Normal;
 
     [Parameter] public string? Value { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; } = false;
 
     [Parameter] public EventCallback<ChangeEventArgs> OnInput { get; set; }
 
@@ -57,6 +62,7 @@
             markdownClass = $"w-100 {heightClass} overflow-scroll p-3 bg-dark-subtle border-0";
         }
         if (value != Value) value = Value;
+        if (readOnly != ReadOnly) readOnly = ReadOnly;
     }
 
     async Task OnInputAsync(string? value)

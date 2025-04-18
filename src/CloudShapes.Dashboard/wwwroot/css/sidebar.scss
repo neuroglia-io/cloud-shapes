@@ -1,0 +1,6 @@
+﻿@import "./theme/_variables.scss";
+
+.bb-sidebar2 {
+    --bb-sidebar2-nav-item-group-background-color: var(--bs-dark-bg-subtle);
+    --bb-sidebar2-nav-item-background-hover-color: rgba(var(--bs-primary-rgb), 0.8);
+}

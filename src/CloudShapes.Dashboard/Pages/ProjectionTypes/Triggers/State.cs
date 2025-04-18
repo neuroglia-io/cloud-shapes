@@ -11,29 +11,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using CloudShapes.Integration.Commands.ProjectionTypes;
-
-namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Create;
+namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Triggers;
 
 /// <summary>
-/// Represents the state of the create projection type view
+/// Represents the state of the Triggers projection type view
 /// </summary>
-public record CreateProjectionTypeState
+public record ProjectionTypeTriggersState
 {
 
     /// <summary>
-    /// Gets/sets a boolean indicating whether or not the view is loading
+    /// Gets/sets the current <see cref="PageStatus"/>
     /// </summary>
-    public bool Loading { get; set; }
+    public string Status { get; set; } = PageStatus.Pending;
 
     /// <summary>
-    /// Gets/sets the command used to create a new projection type
+    /// Gets/sets the name of the <see cref="ProjectionType"/> to show
     /// </summary>
-    public CreateProjectionTypeCommand Command { get; set; } = new();
+    public string ProjectionTypeName { get; set; } = null!;
 
     /// <summary>
-    /// Gets/sets a list containing the errors that have occurred during the validation or the creation of the projection type
+    /// Gets/sets the <see cref="ProjectionType"/> before editing, if any
     /// </summary>
-    public EquatableList<string> Errors { get; set; } = [];
+    public ProjectionType? ProjectionType { get; set; } = null!;
 
 }

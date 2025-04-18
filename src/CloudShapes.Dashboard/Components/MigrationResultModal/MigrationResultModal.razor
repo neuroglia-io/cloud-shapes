@@ -1,0 +1,84 @@
+﻿ @*
+   Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Components
+
+<Callout>
+    <strong>@ProcessedProjections</strong> Projection@(ProcessedProjections == 1 ? "" : "s") Processed.
+</Callout>
+
+@if (Warnings.Count > 0)
+{
+    <Callout Color="CalloutColor.Warning" Heading="WARNINGS">
+        <hr />
+        <ul class ="list-unstyled">
+            @foreach (var warning in Warnings)
+            {
+                <li><Alert Color="AlertColor.Warning" Dismissable="true">@warning</Alert></li>
+            }
+        </ul>
+    </Callout>
+}
+@if (Errors.Count > 0)
+{
+    <Callout Color="CalloutColor.Danger" Heading="ERRORS">
+        <ul class="list-unstyled">
+            @foreach (var validationError in Errors)
+            {
+                <li>
+                    <Alert Color="AlertColor.Danger" Dismissable="true">
+                        <h6>@validationError.Id</h6>
+                        <ul class="list-unstyled">
+                            @foreach (var error in validationError.Errors ?? [])
+                            {
+                                <!-- <p>@error.Key:</p> TODO: empty key ? -->
+                                <ul>
+                                    @foreach (var errorMessage in error.Value)
+                                    {
+                                        <li>@errorMessage</li>
+                                    }
+                                </ul>
+                            }
+                        </ul>
+                    </Alert>
+                </li>
+            }
+        </ul>
+    </Callout>
+}
+@if(Warnings.Count == 0 && Errors.Count == 0)
+{
+    <Callout Color="CalloutColor.Success" Heading="SUCCESS">
+        The migration was successful with no warnings or errors.
+    </Callout>
+}
+
+<div class="d-flex justify-content-between">
+    <Button Color="ButtonColor.Primary" @onclick="AcknowledgeAsync">Ok</Button>
+</div>
+
+
+@code {
+    [Parameter] public string Outcome { get; set; } = string.Empty;
+    [Parameter] public EquatableList<string> Warnings { get; set; } = [];
+    [Parameter] public EquatableList<ProjectionValidationResult> Errors { get; set; } = [];
+    [Parameter] public long ProcessedProjections { get; set; } = 0;
+    [Parameter] public EventCallback OnAcknowledged { get; set; }
+
+    async Task AcknowledgeAsync()
+    {
+        if (OnAcknowledged.HasDelegate) await OnAcknowledged.InvokeAsync();
+    }
+}

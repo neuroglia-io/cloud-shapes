@@ -1,0 +1,107 @@
+﻿@*
+    Copyright © 2025-Present The Cloud Shapes Authors
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*@
+@namespace CloudShapes.Dashboard.Pages.ProjectionTypes.Indexes
+@page "/types/indexes/{projectionTypeName}"
+@using CloudShapes.Integration.Commands.ProjectionTypes
+@inherits StatefulComponent<ProjectionTypeIndexesStore, ProjectionTypeIndexesState>
+@inject NavigationManager Navigation
+
+<ApplicationTitle>@name Indexes</ApplicationTitle>
+
+<div class="d-flex flex-grow">
+    <ProjectionsNav />
+    <div class="w-100 p-3 d-flex flex-column">
+
+        <h4 class="mb-3">
+            <Icon Name="IconName.ListOl" Class="me-2" />
+            @name Indexes
+        </h4>
+        @if (status == PageStatus.Loading)
+        {
+            <Loader />
+        }
+        else
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="text-center">Fields</th>
+                                <th class="text-center">Unique</th>
+                                <th class="text-center">Descending</th>
+                                <th class="text-center">Text</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (indexes.Count > 0)
+                            {
+                                foreach (var index in indexes)
+                                {
+                                    <tr>
+                                        <td>@index.Name</td>
+                                        <td class="text-center">
+                                            @foreach (var property in index.Properties)
+                                            {
+                                                <div><code>@property</code></div>
+                                            }
+                                        </td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Unique" disabled class="form-check mx-auto" /></td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Descending" disabled class="form-check mx-auto" /></td>
+                                        <td class="text-center"><input type="checkbox" checked="@index.Text" disabled class="form-check mx-auto" /></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+
+@code {
+    string status = PageStatus.Pending;
+    string? projectionTypeName;
+    string? name;
+    EquatableList<ProjectionIndexDefinition> indexes = [];
+
+    [Parameter] public string? ProjectionTypeName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Store.ProjectionType.Subscribe(value => OnStateChanged(_ =>
+        {
+            name = value.Name;
+            indexes = value.Indexes ?? [];
+        }), CancellationTokenSource.Token);
+        Store.Status.Subscribe(value => OnStateChanged(_ => status = value), CancellationTokenSource.Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (projectionTypeName != ProjectionTypeName && !string.IsNullOrWhiteSpace(ProjectionTypeName))
+        {
+            Store.SetProjectionTypeName(ProjectionTypeName);
+        }
+        base.OnParametersSet();
+    }
+
+}
